@@ -54,6 +54,12 @@ export interface ImpersonationConfig {
   /** The auth adapter to use (Supabase, Firebase, GenericHTTP, etc.) */
   adapter: ImpersonationAdapter;
 
+  /** Duration in minutes. Takes precedence over durationMs. Default: 15. */
+  durationMinutes?: number;
+
+  /** Hard cap in minutes. Takes precedence over maxDurationMs. Default: 60. */
+  maxDurationMinutes?: number;
+
   /** Duration of each impersonation window in ms. Default: 15 minutes. */
   durationMs?: number;
 

@@ -1,5 +1,7 @@
+import { ImpersonationManager } from "../core/ImpersonationManager";
 import type {
   ImpersonationAdapter,
+  ImpersonationConfig,
   SessionSnapshot,
   ImpersonationResult,
 } from "../core/types";
@@ -122,4 +124,23 @@ export class SupabaseAdapter implements ImpersonationAdapter {
       throw new Error(`Failed to restore admin session: ${error.message}`);
     }
   }
+}
+
+/**
+ * Create an ImpersonationManager with a SupabaseAdapter in one call.
+ *
+ * @example
+ * ```ts
+ * const manager = createSupabaseImpersonation({
+ *   supabaseClient: supabase,
+ *   durationMinutes: 15,
+ * });
+ * ```
+ */
+export function createSupabaseImpersonation(
+  config: SupabaseAdapterConfig & Omit<ImpersonationConfig, "adapter">
+): ImpersonationManager {
+  const { supabaseClient, functionName, ...managerConfig } = config;
+  const adapter = new SupabaseAdapter({ supabaseClient, functionName });
+  return new ImpersonationManager({ adapter, ...managerConfig });
 }

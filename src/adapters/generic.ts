@@ -1,5 +1,7 @@
+import { ImpersonationManager } from "../core/ImpersonationManager";
 import type {
   ImpersonationAdapter,
+  ImpersonationConfig,
   SessionSnapshot,
   ImpersonationResult,
 } from "../core/types";
@@ -14,11 +16,17 @@ export interface GenericHTTPAdapterConfig {
    */
   signIn: (responseData: any) => Promise<void>;
 
-  /** Capture the current session data for later restoration. */
-  getSession: () => Promise<unknown>;
+  /**
+   * Capture the current session data for later restoration.
+   * Default: captures document.cookie (works for cookie-based auth).
+   */
+  getSession?: () => Promise<unknown>;
 
-  /** Restore a previously saved session. */
-  restoreSession: (data: unknown) => Promise<void>;
+  /**
+   * Restore a previously saved session.
+   * Default: no-op (cookie-based auth persists naturally via the browser).
+   */
+  restoreSession?: (data: unknown) => Promise<void>;
 
   /** Optional: sign out the impersonated session before restoring. */
   signOut?: () => Promise<void>;
@@ -63,8 +71,12 @@ export class GenericHTTPAdapter implements ImpersonationAdapter {
   constructor(private config: GenericHTTPAdapterConfig) {}
 
   async saveCurrentSession(): Promise<SessionSnapshot> {
-    const data = await this.config.getSession();
-    return { data };
+    if (this.config.getSession) {
+      const data = await this.config.getSession();
+      return { data };
+    }
+    // Default: capture document.cookie for cookie-based auth
+    return { data: typeof document !== "undefined" ? document.cookie : "" };
   }
 
   async createImpersonatedSession(
@@ -116,7 +128,10 @@ export class GenericHTTPAdapter implements ImpersonationAdapter {
   }
 
   async restoreSession(snapshot: SessionSnapshot): Promise<void> {
-    await this.config.restoreSession(snapshot.data);
+    if (this.config.restoreSession) {
+      await this.config.restoreSession(snapshot.data);
+    }
+    // Default: no-op for cookie-based auth (browser manages cookies)
   }
 
   async destroyImpersonatedSession(): Promise<void> {
@@ -124,4 +139,33 @@ export class GenericHTTPAdapter implements ImpersonationAdapter {
       await this.config.signOut();
     }
   }
+}
+
+/**
+ * Create an ImpersonationManager with a GenericHTTPAdapter in one call.
+ *
+ * @example
+ * ```ts
+ * const manager = createGenericImpersonation({
+ *   startUrl: '/api/admin/impersonate/',
+ *   signIn: async (data) => { document.cookie = `token=${data.token}; path=/`; },
+ *   durationMinutes: 15,
+ * });
+ * ```
+ */
+export function createGenericImpersonation(
+  config: GenericHTTPAdapterConfig & Omit<ImpersonationConfig, "adapter">
+): ImpersonationManager {
+  const {
+    startUrl, signIn, getSession, restoreSession, signOut,
+    getHeaders, buildBody, getDisplayName,
+    ...managerConfig
+  } = config;
+
+  const adapter = new GenericHTTPAdapter({
+    startUrl, signIn, getSession, restoreSession, signOut,
+    getHeaders, buildBody, getDisplayName,
+  });
+
+  return new ImpersonationManager({ adapter, ...managerConfig });
 }

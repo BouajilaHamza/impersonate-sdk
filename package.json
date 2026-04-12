@@ -26,6 +26,11 @@
       "types": "./dist/adapters/generic.d.ts",
       "import": "./dist/adapters/generic.js",
       "require": "./dist/adapters/generic.cjs"
+    },
+    "./supabase-react": {
+      "types": "./dist/supabase-react.d.ts",
+      "import": "./dist/supabase-react.js",
+      "require": "./dist/supabase-react.cjs"
     }
   },
   "files": [

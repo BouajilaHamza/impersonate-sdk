@@ -30,8 +30,14 @@ export class ImpersonationManager {
 
     this.timer = new TimerManager(
       {
-        durationMs: config.durationMs ?? DEFAULTS.durationMs,
-        maxDurationMs: config.maxDurationMs ?? DEFAULTS.maxDurationMs,
+        durationMs:
+          config.durationMinutes != null
+            ? config.durationMinutes * 60_000
+            : (config.durationMs ?? DEFAULTS.durationMs),
+        maxDurationMs:
+          config.maxDurationMinutes != null
+            ? config.maxDurationMinutes * 60_000
+            : (config.maxDurationMs ?? DEFAULTS.maxDurationMs),
         tickIntervalMs: config.tickIntervalMs ?? DEFAULTS.tickIntervalMs,
         urgentThresholdSeconds:
           config.urgentThresholdSeconds ?? DEFAULTS.urgentThresholdSeconds,

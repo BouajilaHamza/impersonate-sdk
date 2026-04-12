@@ -22,6 +22,18 @@ export default defineConfig([
       options.jsx = "automatic";
     },
   },
+  // Supabase + React convenience bundle
+  {
+    entry: { "supabase-react": "src/supabase-react.ts" },
+    format: ["esm", "cjs"],
+    dts: true,
+    sourcemap: true,
+    outDir: "dist",
+    external: ["react", "@supabase/supabase-js"],
+    esbuildOptions(options) {
+      options.jsx = "automatic";
+    },
+  },
   // Adapters
   {
     entry: {

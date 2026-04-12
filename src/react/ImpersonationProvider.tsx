@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
-import type { ImpersonationManager } from "../core/ImpersonationManager";
-import type { ImpersonationState } from "../core/types";
+import { ImpersonationManager } from "../core/ImpersonationManager";
+import type { ImpersonationConfig, ImpersonationState } from "../core/types";
 import { ImpersonationContext } from "./ImpersonationContext";
 
-export interface ImpersonationProviderProps {
-  /** The ImpersonationManager instance (created outside React). */
-  manager: ImpersonationManager;
-
+export type ImpersonationProviderProps = {
   /** Called after impersonation starts successfully. */
   onStart?: (targetDisplayName: string) => void;
 
@@ -17,15 +14,35 @@ export interface ImpersonationProviderProps {
   onError?: (error: Error, phase: "start" | "stop" | "extend") => void;
 
   children: ReactNode;
-}
+} & (
+  | {
+      /** A pre-built ImpersonationManager instance. */
+      manager: ImpersonationManager;
+      config?: never;
+    }
+  | {
+      manager?: never;
+      /** Config to create the manager internally. The manager is created once and destroyed on unmount. */
+      config: ImpersonationConfig;
+    }
+);
 
-export function ImpersonationProvider({
-  manager,
-  onStart,
-  onStop,
-  onError,
-  children,
-}: ImpersonationProviderProps) {
+export function ImpersonationProvider(props: ImpersonationProviderProps) {
+  const { onStart, onStop, onError, children } = props;
+
+  // Create or use the provided manager (stable across re-renders)
+  const managerRef = useRef<ImpersonationManager | null>(null);
+  const ownsManager = useRef(false);
+  if (!managerRef.current) {
+    if (props.manager) {
+      managerRef.current = props.manager;
+    } else {
+      managerRef.current = new ImpersonationManager(props.config!);
+      ownsManager.current = true;
+    }
+  }
+  const manager = managerRef.current;
+
   const [state, setState] = useState<ImpersonationState>(manager.getState());
 
   // Keep callbacks in refs so event listeners always see the latest
@@ -75,6 +92,10 @@ export function ImpersonationProvider({
 
     return () => {
       unsubs.forEach((unsub) => unsub());
+      // Destroy the manager if we created it
+      if (ownsManager.current) {
+        manager.destroy();
+      }
     };
   }, [manager]);
 
