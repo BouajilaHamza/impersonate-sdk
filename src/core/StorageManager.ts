@@ -26,6 +26,7 @@ export class StorageManager {
   private keys: {
     adminSession: string;
     adminProfile: string;
+    displayName: string;
     flag: string;
     expiry: string;
     start: string;
@@ -36,9 +37,10 @@ export class StorageManager {
     this.keys = {
       adminSession: `${prefix}_admin_session`,
       adminProfile: `${prefix}_admin_profile`,
-      flag: `${prefix}_impersonating`,       // localStorage — cross-tab
-      expiry: `${prefix}_expiry`,            // sessionStorage
-      start: `${prefix}_start`,              // sessionStorage
+      displayName: `${prefix}_display_name`,   // sessionStorage
+      flag: `${prefix}_impersonating`,         // localStorage — cross-tab
+      expiry: `${prefix}_expiry`,              // sessionStorage
+      start: `${prefix}_start`,                // sessionStorage
     };
   }
 
@@ -60,6 +62,16 @@ export class StorageManager {
     } catch {
       return null;
     }
+  }
+
+  // ── Display name persistence ──────────────────────────────────────
+
+  saveDisplayName(name: string): void {
+    this.backend.session.setItem(this.keys.displayName, name);
+  }
+
+  getDisplayName(): string | null {
+    return this.backend.session.getItem(this.keys.displayName);
   }
 
   // ── Timer persistence ────────────────────────────────────────────
@@ -103,6 +115,7 @@ export class StorageManager {
   clear(): void {
     this.backend.session.removeItem(this.keys.adminSession);
     this.backend.session.removeItem(this.keys.adminProfile);
+    this.backend.session.removeItem(this.keys.displayName);
     this.backend.session.removeItem(this.keys.expiry);
     this.backend.session.removeItem(this.keys.start);
     this.backend.local.removeItem(this.keys.flag);
@@ -110,6 +123,7 @@ export class StorageManager {
 
   clearOrphanFlag(): void {
     this.backend.local.removeItem(this.keys.flag);
+    this.backend.session.removeItem(this.keys.displayName);
     this.backend.session.removeItem(this.keys.expiry);
     this.backend.session.removeItem(this.keys.start);
   }

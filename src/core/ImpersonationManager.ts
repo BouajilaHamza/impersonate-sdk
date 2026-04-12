@@ -85,6 +85,7 @@ export class ImpersonationManager {
       // 4. Update state
       this.targetDisplayName = result.targetDisplayName;
       this.metadata = result.metadata ?? null;
+      this.storage.saveDisplayName(result.targetDisplayName);
       this.setStatus("active");
 
       this.events.emit("started", {
@@ -228,8 +229,7 @@ export class ImpersonationManager {
     if (timerRestored) {
       // We were impersonating and the timer hasn't expired
       this.status = "active";
-      // Display name is lost on refresh, but session is intact
-      this.targetDisplayName = null;
+      this.targetDisplayName = this.storage.getDisplayName();
       this.emitStateChange();
     } else {
       // Timer expired while page was closed — clean up
