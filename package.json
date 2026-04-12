@@ -1,0 +1,76 @@
+{
+  "name": "@sylergydigital/impersonate-sdk",
+  "version": "0.1.0",
+  "description": "Universal admin impersonation SDK for any web app. Auth-agnostic core with adapters for Supabase, Firebase, Django, Flask, and more.",
+  "type": "module",
+  "main": "./dist/core/index.cjs",
+  "module": "./dist/core/index.js",
+  "types": "./dist/core/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.cjs"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "require": "./dist/react/index.cjs"
+    },
+    "./adapters/supabase": {
+      "types": "./dist/adapters/supabase.d.ts",
+      "import": "./dist/adapters/supabase.js",
+      "require": "./dist/adapters/supabase.cjs"
+    },
+    "./adapters/generic": {
+      "types": "./dist/adapters/generic.d.ts",
+      "import": "./dist/adapters/generic.js",
+      "require": "./dist/adapters/generic.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "servers"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "@supabase/supabase-js": ">=2"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@supabase/supabase-js": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "@types/react": "^18.3.0",
+    "react": "^18.3.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.8.0"
+  },
+  "keywords": [
+    "impersonation",
+    "admin",
+    "view-as-user",
+    "supabase",
+    "firebase",
+    "react",
+    "session-management",
+    "auth"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sylergydigital/impersonate-sdk"
+  },
+  "author": "Sylergy Digital"
+}
