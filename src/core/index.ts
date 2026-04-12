@@ -1,7 +1,4 @@
 export { ImpersonationManager } from "./ImpersonationManager";
-export { EventEmitter } from "./EventEmitter";
-export { StorageManager } from "./StorageManager";
-export { TimerManager } from "./TimerManager";
 
 export type {
   ImpersonationAdapter,

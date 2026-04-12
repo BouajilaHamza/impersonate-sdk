@@ -1,9 +1,6 @@
 // Main entry point re-exports core
 export {
   ImpersonationManager,
-  EventEmitter,
-  StorageManager,
-  TimerManager,
   DEFAULTS,
 } from "./core";
 
