@@ -1,6 +1,6 @@
 {
   "name": "@sylergydigital/impersonate-sdk",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Universal admin impersonation SDK for any web app. Auth-agnostic core with adapters for Supabase, Firebase, Django, Flask, and more.",
   "type": "module",
   "main": "./dist/core/index.cjs",
@@ -47,8 +47,16 @@
       "import": "./dist/supabase-react.js",
       "require": "./dist/supabase-react.cjs"
     },
+    "./config": {
+      "types": "./dist/config/defineConfig.d.ts",
+      "import": "./dist/config/defineConfig.js",
+      "require": "./dist/config/defineConfig.cjs"
+    },
     "./tailwind.css": "./src/styles/tailwind.css",
     "./tailwind-v4.css": "./src/styles/tailwind-v4.css"
+  },
+  "bin": {
+    "impersonate-sdk": "./dist/cli/index.js"
   },
   "files": [
     "dist",
@@ -112,5 +120,8 @@
     "type": "git",
     "url": "https://github.com/sylergydigital/impersonate-sdk"
   },
-  "author": "Sylergy Digital"
+  "author": "Sylergy Digital",
+  "dependencies": {
+    "jiti": "^2"
+  }
 }

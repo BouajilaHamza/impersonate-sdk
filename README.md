@@ -19,7 +19,13 @@ Auth-agnostic core with adapters for **Supabase**, **Firebase**, **Django**, **F
 
 ```bash
 bun add @sylergydigital/impersonate-sdk
+npx impersonate-sdk init                  # copy edge function, write supabase/.env
+supabase link --project-ref <your-ref>    # if not already linked
+npx impersonate-sdk deploy                # push secrets + deploy the function
 ```
+
+Then wire the provider into your app root (the `init` command prints the
+exact snippet for your router):
 
 ```tsx
 import {
@@ -51,6 +57,22 @@ function UserRow({ user }) {
 ```
 
 That's it -- one import path, one factory call.
+
+## Configuration file (optional)
+
+Create `impersonate.config.ts` at the project root to share config between
+the CLI (which writes `supabase/.env` and pushes secrets) and your app:
+
+```ts
+import { defineImpersonationConfig } from '@sylergydigital/impersonate-sdk/config';
+
+export default defineImpersonationConfig({
+  adminRoles: ['admin', 'superadmin'],
+  routes: { adminPath: '/admin/users', userPath: '/' },
+});
+```
+
+Run `npx impersonate-sdk sync` after editing to rewrite `supabase/.env`.
 
 ## Router handoff
 

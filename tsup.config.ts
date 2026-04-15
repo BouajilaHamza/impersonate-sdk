@@ -80,4 +80,24 @@ export default defineConfig([
     outDir: "dist",
     external: ["@supabase/supabase-js"],
   },
+  // Shared config helper (pure type + identity function)
+  {
+    entry: { "config/defineConfig": "src/config/defineConfig.ts" },
+    format: ["esm", "cjs"],
+    dts: true,
+    sourcemap: true,
+    outDir: "dist",
+  },
+  // CLI (Node-only, ESM with shebang)
+  {
+    entry: { "cli/index": "src/cli/index.ts" },
+    format: ["esm"],
+    platform: "node",
+    target: "node18",
+    dts: false,
+    sourcemap: true,
+    outDir: "dist",
+    banner: { js: "#!/usr/bin/env node" },
+    external: ["jiti"],
+  },
 ]);
