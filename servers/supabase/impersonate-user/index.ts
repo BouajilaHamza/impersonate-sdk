@@ -5,16 +5,19 @@
  * The client uses this token with verifyOtp() to establish the target user's session.
  *
  * Required environment variables:
- *   SUPABASE_URL              - Set automatically by Supabase
- *   SUPABASE_ANON_KEY         - Set automatically by Supabase
- *   SUPABASE_SERVICE_ROLE_KEY - Set automatically by Supabase
- *   IMPERSONATION_ADMIN_ROLE_ID - UUID of the admin role allowed to impersonate
+ *   SUPABASE_URL                 - Set automatically by Supabase
+ *   SUPABASE_ANON_KEY            - Set automatically by Supabase
+ *   SUPABASE_SERVICE_ROLE_KEY    - Set automatically by Supabase
+ *   IMPERSONATION_ADMIN_ROLES    - Comma-separated role values allowed to impersonate
+ *                                  (e.g. "admin" or "admin,superadmin")
  *
- * Optional environment variables:
+ * Optional environment variables (override auto-detected schema):
  *   IMPERSONATION_ROLE_TABLE  - Table to query for role (default: "profiles")
- *   IMPERSONATION_ROLE_COLUMN - Column containing role identifier (default: "role_id")
+ *   IMPERSONATION_ROLE_COLUMN - Column containing role value; auto-detected from
+ *                               ["role","role_id","user_role"] if unset
  *   IMPERSONATION_NAME_TABLE  - Table to query for display name (default: "profiles")
- *   IMPERSONATION_NAME_COLUMN - Column for display name (default: "full_name")
+ *   IMPERSONATION_NAME_COLUMN - Column for display name; auto-detected from
+ *                               ["display_name","full_name","name"] if unset
  *
  * Deploy: supabase functions deploy impersonate-user
  */
@@ -170,20 +173,102 @@ export function createImpersonationHandler(options: HandlerOptions) {
 
 // ── Default handler using environment variables ────────────────────
 
-const roleTable = Deno.env.get("IMPERSONATION_ROLE_TABLE") ?? "profiles";
-const roleColumn = Deno.env.get("IMPERSONATION_ROLE_COLUMN") ?? "role_id";
-const nameTable = Deno.env.get("IMPERSONATION_NAME_TABLE") ?? "profiles";
-const nameColumn = Deno.env.get("IMPERSONATION_NAME_COLUMN") ?? "full_name";
+const ROLE_COLUMN_CANDIDATES = ["role", "role_id", "user_role"] as const;
+const NAME_COLUMN_CANDIDATES = ["display_name", "full_name", "name"] as const;
+
+type AdminClient = ReturnType<typeof createClient>;
+
+interface ResolvedSchema {
+  roleTable: string;
+  roleColumn: string;
+  nameTable: string;
+  nameColumn: string;
+}
+
+let schemaPromise: Promise<ResolvedSchema> | null = null;
+
+async function columnExists(
+  admin: AdminClient,
+  table: string,
+  column: string
+): Promise<boolean> {
+  const { error } = await admin.from(table).select(column).limit(0);
+  return !error;
+}
+
+async function probeColumn(
+  admin: AdminClient,
+  table: string,
+  candidates: readonly string[],
+  label: string
+): Promise<string> {
+  for (const candidate of candidates) {
+    if (await columnExists(admin, table, candidate)) return candidate;
+  }
+  throw new Error(
+    `Could not auto-detect ${label} column on "${table}". ` +
+      `Tried [${candidates.join(", ")}]. ` +
+      `Set IMPERSONATION_${label.toUpperCase()}_COLUMN to override.`
+  );
+}
+
+async function resolveSchema(admin: AdminClient): Promise<ResolvedSchema> {
+  const roleTable = Deno.env.get("IMPERSONATION_ROLE_TABLE") ?? "profiles";
+  const nameTable = Deno.env.get("IMPERSONATION_NAME_TABLE") ?? "profiles";
+
+  const roleColumnEnv = Deno.env.get("IMPERSONATION_ROLE_COLUMN");
+  const nameColumnEnv = Deno.env.get("IMPERSONATION_NAME_COLUMN");
+
+  const [roleColumn, nameColumn] = await Promise.all([
+    roleColumnEnv
+      ? Promise.resolve(roleColumnEnv)
+      : probeColumn(admin, roleTable, ROLE_COLUMN_CANDIDATES, "role"),
+    nameColumnEnv
+      ? Promise.resolve(nameColumnEnv)
+      : probeColumn(admin, nameTable, NAME_COLUMN_CANDIDATES, "name"),
+  ]);
+
+  return { roleTable, roleColumn, nameTable, nameColumn };
+}
+
+function getSchema(admin: AdminClient): Promise<ResolvedSchema> {
+  if (!schemaPromise) {
+    schemaPromise = resolveSchema(admin).catch((err) => {
+      schemaPromise = null;
+      throw err;
+    });
+  }
+  return schemaPromise;
+}
+
+function parseAdminRoles(): string[] {
+  const raw = Deno.env.get("IMPERSONATION_ADMIN_ROLES");
+  if (!raw) {
+    if (Deno.env.get("IMPERSONATION_ADMIN_ROLE_ID")) {
+      throw new Error(
+        "IMPERSONATION_ADMIN_ROLE_ID has been renamed to IMPERSONATION_ADMIN_ROLES " +
+          'and now accepts a comma-separated list (e.g. "admin,superadmin").'
+      );
+    }
+    throw new Error(
+      "IMPERSONATION_ADMIN_ROLES environment variable is required"
+    );
+  }
+  const roles = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (roles.length === 0) {
+    throw new Error("IMPERSONATION_ADMIN_ROLES must contain at least one role");
+  }
+  return roles;
+}
 
 Deno.serve(
   createImpersonationHandler({
     isAuthorized: async (userId, admin) => {
-      const adminRoleId = Deno.env.get("IMPERSONATION_ADMIN_ROLE_ID");
-      if (!adminRoleId) {
-        throw new Error(
-          "IMPERSONATION_ADMIN_ROLE_ID environment variable is required"
-        );
-      }
+      const adminRoles = parseAdminRoles();
+      const { roleTable, roleColumn } = await getSchema(admin);
 
       const { data } = await admin
         .from(roleTable)
@@ -191,10 +276,12 @@ Deno.serve(
         .eq("id", userId)
         .single();
 
-      return data?.[roleColumn] === adminRoleId;
+      return adminRoles.includes(data?.[roleColumn]);
     },
 
     getDisplayName: async (userId, admin) => {
+      const { nameTable, nameColumn } = await getSchema(admin);
+
       const { data } = await admin
         .from(nameTable)
         .select(nameColumn)
