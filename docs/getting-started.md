@@ -23,11 +23,14 @@ cp -r node_modules/@sylergydigital/impersonate-sdk/servers/supabase/impersonate-
   supabase/functions/impersonate-user
 ```
 
-Set the required environment variable in your Supabase dashboard:
+Set the required environment variable in your Supabase dashboard (comma-separated, single role is fine):
 
 ```
-IMPERSONATION_ADMIN_ROLE_ID=your-admin-role-uuid
+IMPERSONATION_ADMIN_ROLES=admin
+# or: IMPERSONATION_ADMIN_ROLES=admin,superadmin
 ```
+
+Schema columns for role and display name are auto-detected on the `profiles` table -- override with `IMPERSONATION_ROLE_COLUMN` / `IMPERSONATION_NAME_COLUMN` only if auto-detect fails.
 
 Deploy:
 

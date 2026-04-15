@@ -11,11 +11,11 @@ For Supabase projects. Uses `auth.admin.generateLink()` to create a magic link t
 **Setup:**
 1. Copy `supabase/impersonate-user/` to your project's `supabase/functions/`
 2. Set environment variables in Supabase dashboard:
-   - `IMPERSONATION_ADMIN_ROLE_ID` (required)
+   - `IMPERSONATION_ADMIN_ROLES` (required) -- comma-separated role values (e.g. `admin` or `admin,superadmin`)
    - `IMPERSONATION_ROLE_TABLE` (default: `profiles`)
-   - `IMPERSONATION_ROLE_COLUMN` (default: `role_id`)
+   - `IMPERSONATION_ROLE_COLUMN` -- auto-detected from `role`, `role_id`, `user_role`
    - `IMPERSONATION_NAME_TABLE` (default: `profiles`)
-   - `IMPERSONATION_NAME_COLUMN` (default: `full_name`)
+   - `IMPERSONATION_NAME_COLUMN` -- auto-detected from `display_name`, `full_name`, `name`
 3. Deploy: `supabase functions deploy impersonate-user`
 
 ### Express Middleware (`express/`)

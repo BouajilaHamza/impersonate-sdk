@@ -82,8 +82,8 @@ The SDK falls back to in-memory storage automatically when `window` is undefined
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `IMPERSONATION_ADMIN_ROLE_ID` | Yes | -- | UUID of the admin role |
+| `IMPERSONATION_ADMIN_ROLES` | Yes | -- | Comma-separated role values allowed to impersonate (e.g. `admin,superadmin`) |
 | `IMPERSONATION_ROLE_TABLE` | No | `profiles` | Table to check user role |
-| `IMPERSONATION_ROLE_COLUMN` | No | `role_id` | Column containing role ID |
+| `IMPERSONATION_ROLE_COLUMN` | No | auto-detect | Auto-detected from `role`, `role_id`, `user_role`. Set to override. |
 | `IMPERSONATION_NAME_TABLE` | No | `profiles` | Table to read display name from |
-| `IMPERSONATION_NAME_COLUMN` | No | `full_name` | Column containing display name |
+| `IMPERSONATION_NAME_COLUMN` | No | auto-detect | Auto-detected from `display_name`, `full_name`, `name`. Set to override. |

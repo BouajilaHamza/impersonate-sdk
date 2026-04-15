@@ -1,65 +1,15 @@
-# @sylergydigital/impersonate-sdk
+# Integration Prompt
 
-Universal admin impersonation for any web app. Let admins "view as" any user with a single SDK.
+This is the prompt for AI coding agents (Claude Code, Cursor, Windsurf, etc.) to integrate `@sylergydigital/impersonate-sdk` into an existing project.
 
-Auth-agnostic core with adapters for **Supabase**, **Firebase**, **Django**, **Flask**, **Express**, and any REST backend.
+**Usage:** Tell your agent:
 
-## Features
+> Fetch https://github.com/sylergydigital/impersonate-sdk/blob/main/docs/integration-prompt.md and follow it to integrate the impersonation SDK into this project.
 
-- **Auth-agnostic** -- adapter pattern works with any auth backend
-- **Auto-expiry timer** -- 15-minute default with configurable hard cap
-- **Built-in banner** -- sticky notification bar with countdown, extend, and end actions
-- **Page-refresh survival** -- timer, session, and display name persist through refreshes
-- **Cross-tab safety** -- detects orphaned impersonation sessions
-- **Headless mode** -- use the hook for fully custom UI
-- **Tree-shakeable** -- separate entry points for core, React, and each adapter
-- **Zero dependencies** -- core is pure TypeScript
+Or paste the prompt below directly.
 
-## Quick Start (Supabase + React)
+---
 
-```bash
-bun add @sylergydigital/impersonate-sdk
-```
-
-```tsx
-import {
-  createSupabaseImpersonation,
-  ImpersonationProvider,
-  ImpersonationBanner,
-  useImpersonation,
-} from '@sylergydigital/impersonate-sdk/supabase-react';
-
-const manager = createSupabaseImpersonation({
-  supabaseClient: supabase,
-  durationMinutes: 15,
-});
-
-function App() {
-  return (
-    <ImpersonationProvider manager={manager}>
-      <ImpersonationBanner />
-      <YourApp />
-    </ImpersonationProvider>
-  );
-}
-
-// Then from any component:
-function UserRow({ user }) {
-  const { start } = useImpersonation();
-  return <button onClick={() => start(user.id)}>Impersonate</button>;
-}
-```
-
-That's it -- one import path, one factory call.
-
-## Install with AI
-
-Let Claude Code, Cursor, or any AI coding agent integrate the SDK for you. Copy the prompt below into your agent:
-
-<details>
-<summary><strong>Integration Prompt (click to expand)</strong></summary>
-
-````markdown
 Integrate `@sylergydigital/impersonate-sdk` into this project. This SDK gives admins the ability to "view as" any user with an auto-expiring session, a countdown banner, and page-refresh survival.
 
 ## Phase 1 — Discovery
@@ -78,6 +28,7 @@ Report what you found, then proceed.
 ## Phase 2 — Install
 
 Install the SDK with the detected package manager:
+
 - bun: `bun add @sylergydigital/impersonate-sdk`
 - pnpm: `pnpm add @sylergydigital/impersonate-sdk`
 - yarn: `yarn add @sylergydigital/impersonate-sdk`
@@ -88,17 +39,21 @@ Install the SDK with the detected package manager:
 The SDK needs a server endpoint that validates the admin and returns a session for the target user. The client never decides who can impersonate.
 
 ### If Supabase
+
 1. Copy the template: `cp -r node_modules/@sylergydigital/impersonate-sdk/servers/supabase/impersonate-user supabase/functions/impersonate-user`
 2. Tell the user to set `IMPERSONATION_ADMIN_ROLES` in their Supabase dashboard (comma-separated, e.g. `admin` or `admin,superadmin`). Schema columns for role and display name are auto-detected from `profiles`; override with `IMPERSONATION_ROLE_TABLE` / `IMPERSONATION_ROLE_COLUMN` / `IMPERSONATION_NAME_TABLE` / `IMPERSONATION_NAME_COLUMN` only if auto-detect fails.
 3. Deploy: `supabase functions deploy impersonate-user`
 
 ### If Express
+
 1. Copy `node_modules/@sylergydigital/impersonate-sdk/servers/express/impersonate.ts` into the project's server folder
 2. Mount it on an admin-protected route (e.g. `/api/admin/impersonate`)
 3. Adapt the admin-check middleware to match the project's existing admin check
 
 ### If Django/Flask/custom
+
 Create a POST endpoint that:
+
 1. Verifies the caller is an admin (use the project's existing admin check)
 2. Looks up the target user by the `target_user_id` in the request body
 3. Creates a session/token for the target user
@@ -115,6 +70,7 @@ Create a POST endpoint that:
 ### Create the manager
 
 For Supabase:
+
 ```ts
 import { createSupabaseImpersonation } from '@sylergydigital/impersonate-sdk/supabase-react';
 
@@ -125,6 +81,7 @@ export const impersonationManager = createSupabaseImpersonation({
 ```
 
 For a generic backend (cookie-based auth with smart defaults):
+
 ```ts
 import { createGenericImpersonation } from '@sylergydigital/impersonate-sdk/adapters/generic';
 
@@ -181,16 +138,15 @@ If there is no admin page yet, ask the user where they want it and stop — don'
 
 ### Guard the sign-out function
 
-Find the existing sign-out function and swap it for the SDK hook so impersonation is stopped first (which restores the admin session instead of signing them out):
+For Supabase, swap the existing sign-out for the SDK hook:
 
 ```ts
 import { useGuardedSignOut } from '@sylergydigital/impersonate-sdk/supabase-react';
 
 const signOut = useGuardedSignOut(supabase);
-// <button onClick={signOut}>Sign out</button>
 ```
 
-For non-Supabase backends, keep the manual pattern:
+For non-Supabase backends, wrap manually:
 
 ```ts
 const { isActive, stop } = useImpersonation();
@@ -239,45 +195,9 @@ After wiring everything up:
 ## Reference Docs
 
 If you need more detail:
-- Getting Started: https://github.com/sylergydigital/impersonate-sdk/blob/main/docs/getting-started.md
-- Adapters: https://github.com/sylergydigital/impersonate-sdk/blob/main/docs/adapters.md
-- React API: https://github.com/sylergydigital/impersonate-sdk/blob/main/docs/react-api.md
-- Configuration: https://github.com/sylergydigital/impersonate-sdk/blob/main/docs/configuration.md
-- Security: https://github.com/sylergydigital/impersonate-sdk/blob/main/docs/security.md
-````
 
-</details>
-
-Or give your agent this one-liner, which works with Claude Code, Cursor, and most agents that can fetch URLs:
-
-> Fetch https://github.com/sylergydigital/impersonate-sdk/blob/main/docs/integration-prompt.md and follow it to integrate the impersonation SDK into this project.
-
-## Documentation
-
-| Guide | Description |
-| --- | --- |
-| [Getting Started](docs/getting-started.md) | Full setup walkthrough with server deployment |
-| [Adapters](docs/adapters.md) | Supabase, Generic HTTP, and custom adapter guides |
-| [React API](docs/react-api.md) | Provider, hook, banner, theming, and headless mode |
-| [Vanilla JS](docs/vanilla-js.md) | Using the core without React |
-| [Configuration](docs/configuration.md) | All options with defaults |
-| [Security](docs/security.md) | Security model and best practices |
-| [Integration Prompt](docs/integration-prompt.md) | Prompt for AI agents to integrate the SDK into a project |
-
-## Roadmap
-
-| Version | Scope |
-| --- | --- |
-| **0.1** | Core + Supabase adapter + Generic HTTP adapter + React bindings |
-| 0.2 | Firebase adapter + Cloud Function template |
-| 0.3 | Vue composable + Svelte store bindings |
-| 0.4 | Django/Flask server templates |
-| 1.0 | Audit trail, rate limiting, docs site |
-
-## Contributing
-
-Contributions are welcome. Please open an issue first to discuss what you would like to change.
-
-## License
-
-[MIT](LICENSE)
+- [Getting Started](getting-started.md)
+- [Adapters](adapters.md)
+- [React API](react-api.md)
+- [Configuration](configuration.md)
+- [Security](security.md)
