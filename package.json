@@ -1,6 +1,6 @@
 {
   "name": "@sylergydigital/impersonate-sdk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Universal admin impersonation SDK for any web app. Auth-agnostic core with adapters for Supabase, Firebase, Django, Flask, and more.",
   "type": "module",
   "main": "./dist/core/index.cjs",
@@ -17,6 +17,21 @@
       "import": "./dist/react/index.js",
       "require": "./dist/react/index.cjs"
     },
+    "./react/router/react-router": {
+      "types": "./dist/react/router/react-router.d.ts",
+      "import": "./dist/react/router/react-router.js",
+      "require": "./dist/react/router/react-router.cjs"
+    },
+    "./react/router/next": {
+      "types": "./dist/react/router/next.d.ts",
+      "import": "./dist/react/router/next.js",
+      "require": "./dist/react/router/next.cjs"
+    },
+    "./react/router/tanstack": {
+      "types": "./dist/react/router/tanstack.d.ts",
+      "import": "./dist/react/router/tanstack.js",
+      "require": "./dist/react/router/tanstack.cjs"
+    },
     "./adapters/supabase": {
       "types": "./dist/adapters/supabase.d.ts",
       "import": "./dist/adapters/supabase.js",
@@ -31,13 +46,18 @@
       "types": "./dist/supabase-react.d.ts",
       "import": "./dist/supabase-react.js",
       "require": "./dist/supabase-react.cjs"
-    }
+    },
+    "./tailwind.css": "./src/styles/tailwind.css",
+    "./tailwind-v4.css": "./src/styles/tailwind-v4.css"
   },
   "files": [
     "dist",
-    "servers"
+    "servers",
+    "src/styles"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -45,10 +65,22 @@
   },
   "peerDependencies": {
     "react": ">=17",
+    "react-router": "^7",
+    "next": "^15",
+    "@tanstack/react-router": "^1",
     "@supabase/supabase-js": ">=2"
   },
   "peerDependenciesMeta": {
     "react": {
+      "optional": true
+    },
+    "react-router": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "@tanstack/react-router": {
       "optional": true
     },
     "@supabase/supabase-js": {
@@ -57,8 +89,11 @@
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.49.0",
+    "@tanstack/react-router": "^1.0.0",
     "@types/react": "^18.3.0",
+    "next": "^15.0.0",
     "react": "^18.3.0",
+    "react-router": "^7.0.0",
     "tsup": "^8.0.0",
     "typescript": "^5.8.0"
   },

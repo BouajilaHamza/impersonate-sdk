@@ -1,0 +1,33 @@
+/*
+ * @sylergydigital/impersonate-sdk/tailwind.css
+ *
+ * Maps the SDK banner CSS variables to shadcn/ui (Tailwind v3) HSL tokens.
+ * Import once in your global CSS, after your shadcn tokens:
+ *
+ *   @import "@sylergydigital/impersonate-sdk/tailwind.css";
+ *
+ * Default state uses --primary; urgent state (close to expiry) uses
+ * --destructive. Override any individual --imp-* var to customize.
+ */
+
+:root {
+  --imp-banner-bg: hsl(var(--primary));
+  --imp-banner-text: hsl(var(--primary-foreground));
+
+  --imp-banner-urgent-bg: hsl(var(--destructive));
+  --imp-banner-urgent-text: hsl(var(--destructive-foreground));
+
+  --imp-timer-bg: hsl(var(--primary-foreground) / 0.18);
+  --imp-timer-text: hsl(var(--primary-foreground));
+
+  --imp-timer-urgent-bg: hsl(var(--destructive-foreground) / 0.18);
+  --imp-timer-urgent-text: hsl(var(--destructive-foreground));
+
+  --imp-end-border: hsl(var(--primary-foreground) / 0.3);
+  --imp-end-bg: transparent;
+  --imp-end-text: hsl(var(--primary-foreground));
+
+  --imp-end-border-urgent: hsl(var(--destructive-foreground) / 0.3);
+  --imp-end-bg-urgent: transparent;
+  --imp-end-text-urgent: hsl(var(--destructive-foreground));
+}

@@ -52,6 +52,34 @@ function UserRow({ user }) {
 
 That's it -- one import path, one factory call.
 
+## Router handoff
+
+For react-router, Next.js App Router, or TanStack Router, import the matching hook and spread it into the provider:
+
+```tsx
+// react-router v6+/v7
+import { useReactRouterHandoff } from '@sylergydigital/impersonate-sdk/react/router/react-router';
+
+const handoff = useReactRouterHandoff({ adminPath: '/admin/users', userPath: '/' });
+<ImpersonationProvider manager={manager} {...handoff}>{children}</ImpersonationProvider>
+```
+
+Other routers: `@sylergydigital/impersonate-sdk/react/router/next` (`useNextHandoff`) and `@sylergydigital/impersonate-sdk/react/router/tanstack` (`useTanstackHandoff`). Same API, different peer dep.
+
+## Tailwind theming
+
+The banner reads CSS custom properties (`--imp-banner-bg`, `--imp-banner-urgent-bg`, etc.). For shadcn projects, one import maps them to `--primary` / `--destructive`:
+
+```css
+/* Tailwind v4 */
+@import "@sylergydigital/impersonate-sdk/tailwind-v4.css";
+
+/* Tailwind v3 (HSL triplet tokens) */
+@import "@sylergydigital/impersonate-sdk/tailwind.css";
+```
+
+Override any individual `--imp-*` var in your own CSS to customize.
+
 ## Install with AI
 
 Let Claude Code, Cursor, or any AI coding agent integrate the SDK for you. Copy the prompt below into your agent:
