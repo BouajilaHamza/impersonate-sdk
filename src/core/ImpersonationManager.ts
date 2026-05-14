@@ -107,6 +107,17 @@ export class ImpersonationManager {
     }
   }
 
+  /**
+   * End the current impersonation session and restore the admin session.
+   *
+   * On success: emits `stopped` with the given reason.
+   * On failure (e.g. `restoreSession` throws): best-effort calls
+   * `adapter.clearSession()` to leave the client unauthenticated, then emits
+   * `error` (phase `"stop"`) followed by `stopped` with reason
+   * `"restore-failed"`, then re-throws. Consumers always see a `stopped`
+   * event — even on failure — so `onStop` redirect handlers fire regardless
+   * of whether an `onError` handler is wired up.
+   */
   async stop(reason: StopReason = "manual"): Promise<void> {
     if (this.status !== "active" && reason !== "orphan") {
       // Allow stopping from non-active state for orphan cleanup
