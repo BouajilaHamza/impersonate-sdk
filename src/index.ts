@@ -13,6 +13,7 @@ export type {
   ImpersonationEventMap,
   ImpersonationEventName,
   SessionSnapshot,
+  StopReason,
   StorageBackend,
   StorageArea,
 } from "./core";
