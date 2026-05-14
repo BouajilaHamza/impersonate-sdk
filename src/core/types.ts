@@ -44,6 +44,15 @@ export interface ImpersonationAdapter {
 
   /** Optional: destroy the impersonated session before restoring admin. */
   destroyImpersonatedSession?(): Promise<void>;
+
+  /**
+   * Optional last-resort cleanup. Called by the core when `restoreSession`
+   * fails inside `stop()`. Should fully sign out the currently-active
+   * (impersonated) user so the client is left in a clean unauthenticated
+   * state. Implementations should swallow internal errors — the core treats
+   * this as best-effort.
+   */
+  clearSession?(): Promise<void>;
 }
 
 // ============================================================================
@@ -103,7 +112,7 @@ export interface ImpersonationState {
 
 export interface ImpersonationEventMap {
   started: { targetDisplayName: string; metadata?: Record<string, unknown> };
-  stopped: { reason: "manual" | "timeout" | "orphan" };
+  stopped: { reason: "manual" | "timeout" | "orphan" | "restore-failed" };
   extended: { newExpiresAt: number };
   tick: { remainingMs: number; remainingSeconds: number };
   expiring: { remainingSeconds: number };
