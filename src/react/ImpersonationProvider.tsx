@@ -8,7 +8,7 @@ export type ImpersonationProviderProps = {
   onStart?: (targetDisplayName: string) => void;
 
   /** Called after impersonation stops. */
-  onStop?: (reason: "manual" | "timeout" | "orphan") => void;
+  onStop?: (reason: "manual" | "timeout" | "orphan" | "restore-failed") => void;
 
   /** Called when an error occurs during impersonation lifecycle. */
   onError?: (error: Error, phase: "start" | "stop" | "extend") => void;

@@ -106,7 +106,7 @@ export class ImpersonationManager {
     }
   }
 
-  async stop(reason: "manual" | "timeout" | "orphan" = "manual"): Promise<void> {
+  async stop(reason: "manual" | "timeout" | "orphan" | "restore-failed" = "manual"): Promise<void> {
     if (this.status !== "active" && reason !== "orphan") {
       // Allow stopping from non-active state for orphan cleanup
       if (this.status === "idle") return;

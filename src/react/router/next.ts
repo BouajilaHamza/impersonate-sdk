@@ -26,7 +26,7 @@ export function useNextHandoff(opts: {
   userPath: string;
 }): {
   onStart: (targetDisplayName: string) => void;
-  onStop: (reason: "manual" | "timeout" | "orphan") => void;
+  onStop: (reason: "manual" | "timeout" | "orphan" | "restore-failed") => void;
 } {
   const router = useRouter();
   return {
