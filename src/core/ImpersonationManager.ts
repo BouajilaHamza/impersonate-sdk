@@ -141,7 +141,19 @@ export class ImpersonationManager {
 
       this.events.emit("stopped", { reason });
     } catch (err) {
-      // Even on error, try to clean up
+      // Restore failed. The client is still holding the impersonated user's
+      // session. As a last-resort, force the adapter to clear it so the app
+      // is left in an unauthenticated state rather than silently
+      // impersonated. clearSession is best-effort: if it also throws we
+      // continue.
+      if (this.adapter.clearSession) {
+        try {
+          await this.adapter.clearSession();
+        } catch {
+          // swallow — already in an error path
+        }
+      }
+
       this.storage.clear();
       this.timer.stop();
       this.targetDisplayName = null;
@@ -150,6 +162,11 @@ export class ImpersonationManager {
 
       const error = err instanceof Error ? err : new Error(String(err));
       this.events.emit("error", { error, phase: "stop" });
+      // Always emit "stopped" so consumers' onStop handlers (which typically
+      // redirect the user away) fire even when restore fails. The reason
+      // distinguishes this from a clean stop so consumers can branch (e.g.
+      // show a toast, force re-login).
+      this.events.emit("stopped", { reason: "restore-failed" });
       throw error;
     }
   }
