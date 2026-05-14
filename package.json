@@ -1,6 +1,6 @@
 {
   "name": "@sylergydigital/impersonate-sdk",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Universal admin impersonation SDK for any web app. Auth-agnostic core with adapters for Supabase, Firebase, Django, Flask, and more.",
   "type": "module",
   "main": "./dist/core/index.cjs",
