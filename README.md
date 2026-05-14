@@ -324,6 +324,31 @@ Or give your agent this one-liner, which works with Claude Code, Cursor, and mos
 | 0.4 | Django/Flask server templates |
 | 1.0 | Audit trail, rate limiting, docs site |
 
+## Migration: stop-failed state (v0.7)
+
+Prior to v0.7, when `restoreSession()` threw inside `stop()`, the SDK would:
+
+1. call `adapter.clearSession()` to sign the user out,
+2. emit `error` (phase `"stop"`),
+3. emit `stopped("restore-failed")`,
+4. re-throw the original error.
+
+That meant a transient network failure during stop forced the admin to log in again. From v0.7, the default behavior is recoverable:
+
+1. `error` is emitted with `phase: "stop"` and `canRetry: true`,
+2. the manager enters status `"stop-failed"`,
+3. the saved admin snapshot is **preserved**,
+4. no `stopped` event is emitted,
+5. the error is re-thrown.
+
+Call `manager.retryStop()` (or the `retryStop` function exposed by `useImpersonation()`) to re-attempt the restore. To preserve the v0.6 behavior explicitly, pass `forceClearOnFailure: true`:
+
+```ts
+await manager.stop("manual", { forceClearOnFailure: true });
+```
+
+The React hook exposes a matching `forceStop()` helper.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue first to discuss what you would like to change.
