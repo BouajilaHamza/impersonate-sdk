@@ -1,5 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
+import type { StopReason } from "../../core/types";
 
 /**
  * Router handoff for the Next.js App Router (`next/navigation`).
@@ -26,7 +27,7 @@ export function useNextHandoff(opts: {
   userPath: string;
 }): {
   onStart: (targetDisplayName: string) => void;
-  onStop: (reason: "manual" | "timeout" | "orphan" | "restore-failed") => void;
+  onStop: (reason: StopReason) => void;
 } {
   const router = useRouter();
   return {

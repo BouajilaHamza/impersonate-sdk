@@ -8,6 +8,7 @@ import type {
   ImpersonationStatus,
   ImpersonationEventMap,
   ImpersonationEventName,
+  StopReason,
   DEFAULTS as DefaultsType,
 } from "./types";
 import { DEFAULTS } from "./types";
@@ -106,7 +107,7 @@ export class ImpersonationManager {
     }
   }
 
-  async stop(reason: "manual" | "timeout" | "orphan" | "restore-failed" = "manual"): Promise<void> {
+  async stop(reason: StopReason = "manual"): Promise<void> {
     if (this.status !== "active" && reason !== "orphan") {
       // Allow stopping from non-active state for orphan cleanup
       if (this.status === "idle") return;

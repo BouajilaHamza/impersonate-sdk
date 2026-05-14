@@ -110,9 +110,12 @@ export interface ImpersonationState {
 // Events
 // ============================================================================
 
+/** Why an impersonation session ended. */
+export type StopReason = "manual" | "timeout" | "orphan" | "restore-failed";
+
 export interface ImpersonationEventMap {
   started: { targetDisplayName: string; metadata?: Record<string, unknown> };
-  stopped: { reason: "manual" | "timeout" | "orphan" | "restore-failed" };
+  stopped: { reason: StopReason };
   extended: { newExpiresAt: number };
   tick: { remainingMs: number; remainingSeconds: number };
   expiring: { remainingSeconds: number };
