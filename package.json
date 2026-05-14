@@ -70,6 +70,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "prepare": "tsup"
   },
   "peerDependencies": {
@@ -99,6 +100,7 @@
   "devDependencies": {
     "@supabase/supabase-js": "^2.49.0",
     "@tanstack/react-router": "^1.0.0",
+    "@types/bun": "^1.3.14",
     "@types/react": "^18.3.0",
     "next": "^15.0.0",
     "react": "^18.3.0",
