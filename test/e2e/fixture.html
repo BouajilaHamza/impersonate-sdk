@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>impersonate-sdk e2e fixture</title></head>
+<body>
+<h1>impersonate-sdk e2e fixture</h1>
+<div id="status">idle</div>
+<div id="banner" hidden></div>
+<div id="redirect"></div>
+<script type="module">
+  import { ImpersonationManager } from "/dist/core/index.js";
+
+  // Adapter behaviour is driven by window.__cfg, set per test before reload.
+  const cfg = window.__cfg ?? {};
+
+  let clearCalls = 0;
+  const adapter = {
+    async saveCurrentSession() { return { data: { admin: "tok" } }; },
+    async createImpersonatedSession(id) { return { targetDisplayName: `User ${id}` }; },
+    async restoreSession() {
+      if (cfg.restoreFails) throw new Error("setSession failed (simulated)");
+    },
+    async clearSession() {
+      clearCalls++;
+      if (cfg.clearFails) throw new Error("clearSession failed");
+    },
+  };
+
+  const manager = new ImpersonationManager({
+    adapter,
+    durationMs: cfg.durationMs ?? 200, // short for tests
+    tickIntervalMs: cfg.tickIntervalMs ?? 50,
+  });
+
+  const events = [];
+  const status = document.getElementById("status");
+  const banner = document.getElementById("banner");
+  const redirect = document.getElementById("redirect");
+
+  manager.on("started", (d) => { events.push({ name: "started", data: d }); banner.hidden = false; banner.textContent = `Viewing as ${d.targetDisplayName}`; });
+  manager.on("stopped", (d) => {
+    events.push({ name: "stopped", data: d });
+    banner.hidden = true;
+    // Consumer redirect contract — onStop drives navigation.
+    redirect.textContent = d.reason === "restore-failed" ? "/login?session_lost=1" : "/admin/users";
+  });
+  manager.on("error", (d) => events.push({ name: "error", data: { phase: d.phase, message: d.error.message } }));
+  manager.on("statechange", (d) => { status.textContent = d.state.status; });
+
+  window.__manager = manager;
+  window.__events = events;
+  window.__clearCalls = () => clearCalls;
+  window.__start = (id) => manager.start(id);
+  window.__stop = (reason) => manager.stop(reason).catch((e) => ({ rejected: true, message: e.message }));
+  window.__ready = true;
+</script>
+</body>
+</html>

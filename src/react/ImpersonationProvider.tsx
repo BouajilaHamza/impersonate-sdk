@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { ImpersonationManager } from "../core/ImpersonationManager";
-import type { ImpersonationConfig, ImpersonationState } from "../core/types";
+import type { ImpersonationConfig, ImpersonationState, StopReason } from "../core/types";
 import { ImpersonationContext } from "./ImpersonationContext";
 
 export type ImpersonationProviderProps = {
@@ -8,7 +8,7 @@ export type ImpersonationProviderProps = {
   onStart?: (targetDisplayName: string) => void;
 
   /** Called after impersonation stops. */
-  onStop?: (reason: "manual" | "timeout" | "orphan") => void;
+  onStop?: (reason: StopReason) => void;
 
   /** Called when an error occurs during impersonation lifecycle. */
   onError?: (error: Error, phase: "start" | "stop" | "extend") => void;

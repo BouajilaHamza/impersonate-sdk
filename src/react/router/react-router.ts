@@ -1,5 +1,6 @@
 "use client";
 import { useNavigate } from "react-router";
+import type { StopReason } from "../../core/types";
 
 /**
  * Router handoff for react-router v6+ / v7.
@@ -25,7 +26,7 @@ export function useReactRouterHandoff(opts: {
   userPath: string;
 }): {
   onStart: (targetDisplayName: string) => void;
-  onStop: (reason: "manual" | "timeout" | "orphan") => void;
+  onStop: (reason: StopReason) => void;
 } {
   const navigate = useNavigate();
   return {

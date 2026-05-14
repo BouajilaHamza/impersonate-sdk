@@ -83,7 +83,7 @@ const manager = createGenericImpersonation({
 
 ## Custom Adapter
 
-Implement the `ImpersonationAdapter` interface (4 methods, 1 optional):
+Implement the `ImpersonationAdapter` interface (3 required methods, 2 optional):
 
 ```ts
 import type { ImpersonationAdapter } from '@sylergydigital/impersonate-sdk';
@@ -106,6 +106,16 @@ class MyAdapter implements ImpersonationAdapter {
   // Optional:
   async destroyImpersonatedSession() {
     // Clean up the impersonated session before restoring admin
+  }
+
+  // Optional but strongly recommended:
+  async clearSession() {
+    // Sign out the currently-active (impersonated) user.
+    // Called by the core as a last resort when `restoreSession` fails inside
+    // `stop()` — leaves the client unauthenticated instead of silently
+    // impersonated. The built-in SupabaseAdapter implements this via
+    // `supabase.auth.signOut()`. Implementations should throw on failure; the
+    // core wraps the call in a try/catch.
   }
 }
 ```

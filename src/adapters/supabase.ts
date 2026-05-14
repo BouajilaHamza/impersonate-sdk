@@ -29,6 +29,7 @@ interface SupabaseClient {
       token_hash: string;
       type: "magiclink";
     }): Promise<{ error: Error | null }>;
+    signOut(): Promise<{ error: Error | null }>;
   };
   functions: {
     invoke(
@@ -122,6 +123,13 @@ export class SupabaseAdapter implements ImpersonationAdapter {
 
     if (error) {
       throw new Error(`Failed to restore admin session: ${error.message}`);
+    }
+  }
+
+  async clearSession(): Promise<void> {
+    const { error } = await this.supabase.auth.signOut();
+    if (error) {
+      throw new Error(`Failed to clear impersonated session: ${error.message}`);
     }
   }
 }

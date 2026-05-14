@@ -1,6 +1,6 @@
 {
   "name": "@sylergydigital/impersonate-sdk",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Universal admin impersonation SDK for any web app. Auth-agnostic core with adapters for Supabase, Firebase, Django, Flask, and more.",
   "type": "module",
   "main": "./dist/core/index.cjs",
@@ -70,6 +70,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "test": "bun test src",
+    "test:e2e": "playwright test",
     "prepare": "tsup"
   },
   "peerDependencies": {
@@ -97,8 +99,10 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@supabase/supabase-js": "^2.49.0",
     "@tanstack/react-router": "^1.0.0",
+    "@types/bun": "^1.3.14",
     "@types/react": "^18.3.0",
     "next": "^15.0.0",
     "react": "^18.3.0",

@@ -8,6 +8,7 @@ import type {
   ImpersonationStatus,
   ImpersonationEventMap,
   ImpersonationEventName,
+  StopReason,
   DEFAULTS as DefaultsType,
 } from "./types";
 import { DEFAULTS } from "./types";
@@ -106,7 +107,18 @@ export class ImpersonationManager {
     }
   }
 
-  async stop(reason: "manual" | "timeout" | "orphan" = "manual"): Promise<void> {
+  /**
+   * End the current impersonation session and restore the admin session.
+   *
+   * On success: emits `stopped` with the given reason.
+   * On failure (e.g. `restoreSession` throws): best-effort calls
+   * `adapter.clearSession()` to leave the client unauthenticated, then emits
+   * `error` (phase `"stop"`) followed by `stopped` with reason
+   * `"restore-failed"`, then re-throws. Consumers always see a `stopped`
+   * event — even on failure — so `onStop` redirect handlers fire regardless
+   * of whether an `onError` handler is wired up.
+   */
+  async stop(reason: StopReason = "manual"): Promise<void> {
     if (this.status !== "active" && reason !== "orphan") {
       // Allow stopping from non-active state for orphan cleanup
       if (this.status === "idle") return;
@@ -140,7 +152,19 @@ export class ImpersonationManager {
 
       this.events.emit("stopped", { reason });
     } catch (err) {
-      // Even on error, try to clean up
+      // Restore failed. The client is still holding the impersonated user's
+      // session. As a last-resort, force the adapter to clear it so the app
+      // is left in an unauthenticated state rather than silently
+      // impersonated. clearSession is best-effort: if it also throws we
+      // continue.
+      if (this.adapter.clearSession) {
+        try {
+          await this.adapter.clearSession();
+        } catch {
+          // swallow — already in an error path
+        }
+      }
+
       this.storage.clear();
       this.timer.stop();
       this.targetDisplayName = null;
@@ -149,6 +173,11 @@ export class ImpersonationManager {
 
       const error = err instanceof Error ? err : new Error(String(err));
       this.events.emit("error", { error, phase: "stop" });
+      // Always emit "stopped" so consumers' onStop handlers (which typically
+      // redirect the user away) fire even when restore fails. The reason
+      // distinguishes this from a clean stop so consumers can branch (e.g.
+      // show a toast, force re-login).
+      this.events.emit("stopped", { reason: "restore-failed" });
       throw error;
     }
   }

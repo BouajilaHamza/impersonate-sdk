@@ -1,5 +1,6 @@
 "use client";
 import { useNavigate } from "@tanstack/react-router";
+import type { StopReason } from "../../core/types";
 
 /**
  * Router handoff for TanStack Router.
@@ -25,7 +26,7 @@ export function useTanstackHandoff(opts: {
   userPath: string;
 }): {
   onStart: (targetDisplayName: string) => void;
-  onStop: (reason: "manual" | "timeout" | "orphan") => void;
+  onStop: (reason: StopReason) => void;
 } {
   const navigate = useNavigate();
   return {
