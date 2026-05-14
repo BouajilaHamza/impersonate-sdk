@@ -41,8 +41,15 @@ The manager is created once on mount and destroyed on unmount.
 | `manager` | `ImpersonationManager` | A pre-built manager instance (mutually exclusive with `config`) |
 | `config` | `ImpersonationConfig` | Config to create the manager internally (mutually exclusive with `manager`) |
 | `onStart` | `(targetName: string) => void` | Called after impersonation starts |
-| `onStop` | `(reason: 'manual' \| 'timeout' \| 'orphan') => void` | Called after impersonation stops |
+| `onStop` | `(reason: 'manual' \| 'timeout' \| 'orphan' \| 'restore-failed') => void` | Called after impersonation stops |
 | `onError` | `(error: Error, phase: 'start' \| 'stop' \| 'extend') => void` | Called on error |
+
+#### `onStop` reasons
+
+- `manual` — the admin clicked "End Impersonation".
+- `timeout` — the impersonation timer expired and the admin session was restored cleanly.
+- `orphan` — a stale impersonation session was detected on app mount (e.g. tab was closed mid-session) and cleaned up.
+- `restore-failed` — the admin session could not be restored (typically a transient network failure on the auth backend, e.g. Supabase's `setSession` `_getUser` call failing in a backgrounded tab). The SDK has already best-effort signed the impersonated user out via the adapter's `clearSession` hook, so the client is unauthenticated. Your `onStop` handler should redirect to a safe location (login or admin home). Use `onError` (phase `"stop"`) if you want to additionally surface a toast.
 
 ## `useImpersonation()`
 
