@@ -24,11 +24,50 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+// ── Rate limiting (in-memory, per Deno isolate) ────────────────────
+const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
+const RATE_LIMIT_WINDOW_MS =
+  parseInt(Deno.env.get("IMPERSONATION_RATE_LIMIT_WINDOW_MS") ?? "", 10) ||
+  60 * 60 * 1000; // 1 hour default
+const RATE_LIMIT_MAX =
+  parseInt(Deno.env.get("IMPERSONATION_RATE_LIMIT_MAX") ?? "", 10) || 10; // 10 requests per window default
+
+function checkRateLimit(adminId: string): { allowed: boolean; retryAfterSeconds: number } {
+  const now = Date.now();
+  const entry = rateLimitMap.get(adminId);
+
+  if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(adminId, { count: 1, windowStart: now });
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) {
+    const retryAfterSeconds = Math.ceil((entry.windowStart + RATE_LIMIT_WINDOW_MS - now) / 1000);
+    return { allowed: false, retryAfterSeconds };
+  }
+
+  entry.count++;
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+  };
+
+  const allowedOrigins = (Deno.env.get("IMPERSONATION_ALLOWED_ORIGINS") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const origin = req.headers.get("Origin") ?? "";
+  if (allowedOrigins.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+}
 
 // ── Factory: use this for advanced customization ───────────────────
 
@@ -49,7 +88,7 @@ interface HandlerOptions {
 export function createImpersonationHandler(options: HandlerOptions) {
   return async (req: Request): Promise<Response> => {
     if (req.method === "OPTIONS") {
-      return new Response("ok", { headers: corsHeaders });
+      return new Response("ok", { headers: getCorsHeaders(req) });
     }
 
     try {
@@ -57,7 +96,7 @@ export function createImpersonationHandler(options: HandlerOptions) {
       if (!authHeader) {
         return Response.json(
           { error: "Unauthorized" },
-          { status: 401, headers: corsHeaders }
+          { status: 401, headers: getCorsHeaders(req) }
         );
       }
 
@@ -81,7 +120,7 @@ export function createImpersonationHandler(options: HandlerOptions) {
       if (authError || !user) {
         return Response.json(
           { error: "Unauthorized" },
-          { status: 401, headers: corsHeaders }
+          { status: 401, headers: getCorsHeaders(req) }
         );
       }
 
@@ -90,16 +129,32 @@ export function createImpersonationHandler(options: HandlerOptions) {
       if (!authorized) {
         return Response.json(
           { error: "Forbidden: insufficient permissions to impersonate" },
-          { status: 403, headers: corsHeaders }
+          { status: 403, headers: getCorsHeaders(req) }
+        );
+      }
+
+      // Rate limit check
+      const rateLimit = checkRateLimit(user.id);
+      if (!rateLimit.allowed) {
+        return Response.json(
+          { error: "Rate limit exceeded. Try again later." },
+          {
+            status: 429,
+            headers: {
+              ...getCorsHeaders(req),
+              "Retry-After": String(rateLimit.retryAfterSeconds),
+            },
+          }
         );
       }
 
       const { target_user_id } = await req.json();
 
-      if (!target_user_id) {
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!target_user_id || typeof target_user_id !== 'string' || !UUID_RE.test(target_user_id)) {
         return Response.json(
-          { error: "Missing required field: target_user_id" },
-          { status: 400, headers: corsHeaders }
+          { error: "Invalid target_user_id: must be a valid UUID" },
+          { status: 400, headers: getCorsHeaders(req) }
         );
       }
 
@@ -107,7 +162,7 @@ export function createImpersonationHandler(options: HandlerOptions) {
       if (target_user_id === user.id) {
         return Response.json(
           { error: "Cannot impersonate yourself" },
-          { status: 400, headers: corsHeaders }
+          { status: 400, headers: getCorsHeaders(req) }
         );
       }
 
@@ -118,7 +173,7 @@ export function createImpersonationHandler(options: HandlerOptions) {
       if (targetAuthError || !targetAuthUser?.user) {
         return Response.json(
           { error: "Target user not found" },
-          { status: 404, headers: corsHeaders }
+          { status: 404, headers: getCorsHeaders(req) }
         );
       }
 
@@ -126,7 +181,7 @@ export function createImpersonationHandler(options: HandlerOptions) {
       if (!targetEmail) {
         return Response.json(
           { error: "Target user has no email" },
-          { status: 400, headers: corsHeaders }
+          { status: 400, headers: getCorsHeaders(req) }
         );
       }
 
@@ -150,22 +205,25 @@ export function createImpersonationHandler(options: HandlerOptions) {
         console.error("generateLink error:", linkError);
         return Response.json(
           { error: "Failed to generate impersonation token" },
-          { status: 500, headers: corsHeaders }
+          { status: 500, headers: getCorsHeaders(req) }
         );
       }
+
+      // Audit log (best-effort, don't await if you want fire-and-forget)
+      await logImpersonation(supabaseAdmin, user.id, target_user_id, targetUserName);
 
       return Response.json(
         {
           hashed_token: linkData.properties.hashed_token,
           target_user_name: targetUserName || targetEmail,
         },
-        { headers: corsHeaders }
+        { headers: getCorsHeaders(req) }
       );
     } catch (err) {
       console.error("impersonate-user error:", err);
       return Response.json(
         { error: "Internal server error" },
-        { status: 500, headers: corsHeaders }
+        { status: 500, headers: getCorsHeaders(req) }
       );
     }
   };
@@ -241,7 +299,11 @@ function getSchema(admin: AdminClient): Promise<ResolvedSchema> {
   return schemaPromise;
 }
 
+let cachedAdminRoles: string[] | null = null;
+
 function parseAdminRoles(): string[] {
+  if (cachedAdminRoles !== null) return cachedAdminRoles;
+
   const raw = Deno.env.get("IMPERSONATION_ADMIN_ROLES");
   if (!raw) {
     if (Deno.env.get("IMPERSONATION_ADMIN_ROLE_ID")) {
@@ -261,7 +323,28 @@ function parseAdminRoles(): string[] {
   if (roles.length === 0) {
     throw new Error("IMPERSONATION_ADMIN_ROLES must contain at least one role");
   }
+  cachedAdminRoles = roles;
   return roles;
+}
+
+// ── Audit logging ────────────────────────────────────────────────
+async function logImpersonation(
+  admin: AdminClient,
+  adminId: string,
+  targetId: string,
+  targetDisplayName: string | null
+): Promise<void> {
+  try {
+    await admin.from("impersonation_audit_log").insert({
+      admin_id: adminId,
+      target_user_id: targetId,
+      target_display_name: targetDisplayName,
+      started_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    // Audit logging is best-effort — don't fail the request
+    console.error("[impersonate-sdk] audit log failed:", err);
+  }
 }
 
 Deno.serve(

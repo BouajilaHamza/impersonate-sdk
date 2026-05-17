@@ -16,6 +16,7 @@ export default defineConfig([
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
     external: ["react", "@sylergydigital/impersonate-sdk"],
     esbuildOptions(options) {
@@ -28,6 +29,7 @@ export default defineConfig([
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
     external: ["react", "react-router"],
     esbuildOptions(options) {
@@ -39,6 +41,7 @@ export default defineConfig([
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
     external: ["react", "next", "next/navigation"],
     esbuildOptions(options) {
@@ -50,6 +53,7 @@ export default defineConfig([
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
     external: ["react", "@tanstack/react-router"],
     esbuildOptions(options) {
@@ -62,6 +66,7 @@ export default defineConfig([
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
     external: ["react", "@supabase/supabase-js"],
     esbuildOptions(options) {
@@ -77,6 +82,7 @@ export default defineConfig([
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
     external: ["@supabase/supabase-js"],
   },
@@ -86,6 +92,7 @@ export default defineConfig([
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
   },
   // CLI (Node-only, ESM with shebang)
@@ -96,6 +103,7 @@ export default defineConfig([
     target: "node18",
     dts: false,
     sourcemap: true,
+    clean: true,
     outDir: "dist",
     banner: { js: "#!/usr/bin/env node" },
     external: ["jiti"],

@@ -278,7 +278,7 @@ export function ImpersonationBanner({
   }
 
   const displayName = targetDisplayName || "another user";
-  const showExtendButton = isUrgent && remainingSeconds !== null && remainingSeconds > 0;
+  const showExtendButton = canExtend && remainingSeconds !== null && remainingSeconds > 0;
 
   return (
     <div

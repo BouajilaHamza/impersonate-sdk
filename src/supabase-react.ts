@@ -45,6 +45,12 @@ export function useGuardedSignOut(
       await stop();
       return;
     }
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (err) {
+      console.warn('[impersonate-sdk] signOut failed:', err instanceof Error ? err.message : err);
+      throw err;
+    }
   };
 }

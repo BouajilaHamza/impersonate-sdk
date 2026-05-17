@@ -75,7 +75,7 @@ export class ImpersonationManager {
     try {
       // 1. Save admin session
       const snapshot = await this.adapter.saveCurrentSession();
-      this.storage.saveSnapshot(snapshot);
+      await this.storage.saveSnapshot(snapshot);
 
       // 2. Create impersonated session
       const result = await this.adapter.createImpersonatedSession(targetUserId);
@@ -134,7 +134,7 @@ export class ImpersonationManager {
       this.timer.stop();
 
       // 2. Restore admin session
-      const snapshot = this.storage.getSnapshot();
+      const snapshot = await this.storage.getSnapshot();
       if (snapshot) {
         if (this.adapter.destroyImpersonatedSession) {
           await this.adapter.destroyImpersonatedSession();

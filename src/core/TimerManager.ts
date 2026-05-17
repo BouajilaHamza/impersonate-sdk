@@ -120,14 +120,24 @@ export class TimerManager {
   }
 
   private tick(): void {
+    // Guard: prevent re-entry during async stop triggered by expiry
+    if (this.intervalId === null) return;
+
     const remaining = this.remainingMs;
     const remainingSecs = this.remainingSeconds;
 
     if (remaining === null || remainingSecs === null) return;
 
     if (remaining <= 0) {
+      // Stop interval FIRST to prevent re-entry
+      if (this.intervalId !== null) {
+        clearInterval(this.intervalId);
+        this.intervalId = null;
+      }
       this.events.emit("expired", {});
-      this.stop();
+      this.startedAt = null;
+      this.expiresAt = null;
+      this.expiringFired = false;
       return;
     }
 
