@@ -25,6 +25,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 // ── Rate limiting (in-memory, per Deno isolate) ────────────────────
+//
+// NOTE: This map lives in a single Deno isolate. Deno Deploy may spin up
+// multiple isolates per region under load, so the effective per-admin limit
+// is approximate (≤ N_isolates × RATE_LIMIT_MAX). For a strict global cap,
+// back this with a `rate_limit` table in Supabase and use an atomic upsert.
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
 const RATE_LIMIT_WINDOW_MS =
   parseInt(Deno.env.get("IMPERSONATION_RATE_LIMIT_WINDOW_MS") ?? "", 10) ||
@@ -209,8 +214,10 @@ export function createImpersonationHandler(options: HandlerOptions) {
         );
       }
 
-      // Audit log (best-effort, don't await if you want fire-and-forget)
-      await logImpersonation(supabaseAdmin, user.id, target_user_id, targetUserName);
+      // Fire-and-forget — audit log must not block the impersonation request.
+      logImpersonation(supabaseAdmin, user.id, target_user_id, targetUserName).catch(
+        (err) => console.error("[impersonate-sdk] audit log failed:", err)
+      );
 
       return Response.json(
         {
@@ -328,23 +335,19 @@ function parseAdminRoles(): string[] {
 }
 
 // ── Audit logging ────────────────────────────────────────────────
+// Errors are surfaced via the caller's .catch — keep this function lean.
 async function logImpersonation(
   admin: AdminClient,
   adminId: string,
   targetId: string,
   targetDisplayName: string | null
 ): Promise<void> {
-  try {
-    await admin.from("impersonation_audit_log").insert({
-      admin_id: adminId,
-      target_user_id: targetId,
-      target_display_name: targetDisplayName,
-      started_at: new Date().toISOString(),
-    });
-  } catch (err) {
-    // Audit logging is best-effort — don't fail the request
-    console.error("[impersonate-sdk] audit log failed:", err);
-  }
+  await admin.from("impersonation_audit_log").insert({
+    admin_id: adminId,
+    target_user_id: targetId,
+    target_display_name: targetDisplayName,
+    started_at: new Date().toISOString(),
+  });
 }
 
 Deno.serve(
