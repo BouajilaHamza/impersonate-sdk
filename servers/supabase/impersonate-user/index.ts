@@ -148,7 +148,7 @@ export function createImpersonationHandler(options: HandlerOptions) {
         );
       }
 
-      const { target_user_id } = await req.json();
+      const { target_user_id } = await req.json().catch(() => ({}));
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!target_user_id || typeof target_user_id !== 'string' || !UUID_RE.test(target_user_id)) {
