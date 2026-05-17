@@ -1,5 +1,4 @@
 import type { SessionSnapshot, StorageBackend, StorageArea } from "./types";
-import { encrypt, decrypt } from "./crypto";
 
 /** In-memory fallback for SSR / testing environments. */
 class MemoryStorageArea implements StorageArea {
@@ -47,25 +46,21 @@ export class StorageManager {
 
   // ── Session snapshot ─────────────────────────────────────────────
 
-  async saveSnapshot(snapshot: SessionSnapshot): Promise<void> {
-    const encrypted = await encrypt(JSON.stringify(snapshot.data));
-    this.backend.session.setItem(this.keys.adminSession, encrypted);
+  saveSnapshot(snapshot: SessionSnapshot): void {
+    this.backend.session.setItem(
+      this.keys.adminSession,
+      JSON.stringify(snapshot.data)
+    );
     this.backend.local.setItem(this.keys.flag, "true");
   }
 
-  async getSnapshot(): Promise<SessionSnapshot | null> {
+  getSnapshot(): SessionSnapshot | null {
     const raw = this.backend.session.getItem(this.keys.adminSession);
     if (!raw) return null;
     try {
-      const decrypted = await decrypt(raw);
-      return { data: JSON.parse(decrypted) };
+      return { data: JSON.parse(raw) };
     } catch {
-      // Legacy: might be unencrypted JSON from before upgrade
-      try {
-        return { data: JSON.parse(raw) };
-      } catch {
-        return null;
-      }
+      return null;
     }
   }
 
