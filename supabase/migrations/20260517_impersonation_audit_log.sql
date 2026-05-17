@@ -4,8 +4,7 @@ CREATE TABLE IF NOT EXISTS impersonation_audit_log (
   admin_id UUID NOT NULL REFERENCES auth.users(id),
   target_user_id UUID NOT NULL REFERENCES auth.users(id),
   target_display_name TEXT,
-  started_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  stopped_at TIMESTAMPTZ
+  started_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Index for querying by admin
