@@ -1,5 +1,5 @@
 import type { CSSProperties, PointerEvent, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getNextBannerPosition,
   persistBannerPosition,
@@ -217,6 +217,12 @@ const styles = {
   } satisfies CSSProperties,
 } as const;
 
+interface DragState {
+  pointerId: number;
+  offsetY: number;
+  initialTop: number;
+}
+
 // Inject pulse keyframes if not already present
 const STYLE_ID = "imp-sdk-keyframes";
 function ensureKeyframes() {
@@ -288,14 +294,12 @@ export function ImpersonationBanner({
   render,
 }: ImpersonationBannerProps) {
   ensureKeyframes();
+  const bannerRef = useRef<HTMLDivElement | null>(null);
+  const dragStateRef = useRef<DragState | null>(null);
   const [position, setPosition] = useState<BannerPosition>(() =>
     resolveBannerPosition({ defaultPosition })
   );
-  const [dragState, setDragState] = useState<{
-    pointerId: number;
-    offsetY: number;
-    currentY: number;
-  } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const {
     isActive,
@@ -332,28 +336,37 @@ export function ImpersonationBanner({
     if (!canStartDrag(event.target)) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
+    const offsetY = event.clientY - rect.top;
     event.currentTarget.setPointerCapture(event.pointerId);
-    setDragState({
+    dragStateRef.current = {
       pointerId: event.pointerId,
-      offsetY: event.clientY - rect.top,
-      currentY: event.clientY,
-    });
+      offsetY,
+      initialTop: rect.top,
+    };
+    setBannerDragTop(
+      bannerRef.current ?? event.currentTarget,
+      event.clientY - offsetY
+    );
+    setIsDragging(true);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
     if (!dragState || event.pointerId !== dragState.pointerId) return;
 
-    setDragState({
-      ...dragState,
-      currentY: event.clientY,
-    });
+    setBannerDragTop(
+      bannerRef.current ?? event.currentTarget,
+      event.clientY - dragState.offsetY
+    );
   };
 
   const finishDrag = (event: PointerEvent<HTMLDivElement>) => {
+    const dragState = dragStateRef.current;
     if (!dragState || event.pointerId !== dragState.pointerId) return;
 
     applyPosition(snapBannerPosition(event.clientY, window.innerHeight));
-    setDragState(null);
+    dragStateRef.current = null;
+    setIsDragging(false);
   };
 
   if (!isActive) return null;
@@ -377,8 +390,8 @@ export function ImpersonationBanner({
   }
 
   const displayName = targetDisplayName || "another user";
-  const showExtendButton = canExtend && remainingSeconds !== null && remainingSeconds > 0;
-  const isDragging = dragState !== null;
+  const showExtendButton =
+    canExtend && remainingSeconds !== null && remainingSeconds > 0;
   const moveLabel =
     position === "top"
       ? "Move impersonation banner to bottom"
@@ -386,6 +399,7 @@ export function ImpersonationBanner({
 
   return (
     <div
+      ref={bannerRef}
       className={className}
       onPointerCancel={finishDrag}
       onPointerDown={handlePointerDown}
@@ -396,7 +410,7 @@ export function ImpersonationBanner({
         ...(isUrgent ? styles.bannerUrgent : styles.bannerNormal),
         ...(isDragging
           ? {
-              top: dragState.currentY - dragState.offsetY,
+              top: dragStateRef.current?.initialTop ?? 0,
               bottom: "auto",
               cursor: "grabbing",
               transition: "none",
@@ -474,6 +488,11 @@ export function ImpersonationBanner({
       </button>
     </div>
   );
+}
+
+function setBannerDragTop(element: HTMLElement, top: number): void {
+  element.style.top = `${top}px`;
+  element.style.bottom = "auto";
 }
 
 function canStartDrag(target: EventTarget): boolean {
