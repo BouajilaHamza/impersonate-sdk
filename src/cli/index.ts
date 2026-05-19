@@ -9,18 +9,27 @@ Usage:
 
 Commands:
   init     Copy the edge function, write supabase/.env, print provider wiring.
-  deploy   Push secrets (supabase secrets set) and deploy the edge function.
+  deploy   Push secrets and deploy the edge function.
   sync     Re-read impersonate.config.ts and rewrite supabase/.env. No network.
 
 Options:
-  --dry-run    (deploy) print the supabase commands without running them
+  --dry-run    (deploy) print actions without running them
   --yes, -y    (deploy) skip the confirmation prompt
+  --use-cli    (deploy) force supabase CLI path instead of Management API
   --help, -h   show this message
+
+Deploy paths:
+  Default uses Supabase Management API — no CLI binary required.
+  Set in .env, .env.local, or supabase/.env:
+    SUPABASE_ACCESS_TOKEN=sbp_...   (create at supabase.com/dashboard/account/tokens)
+    SUPABASE_PROJECT_REF=<your-ref>
+  Falls back to the supabase CLI if installed, logged in, and linked.
 
 Examples:
   npx impersonate-sdk init
   npx impersonate-sdk deploy --dry-run
   npx impersonate-sdk deploy --yes
+  npx impersonate-sdk deploy --use-cli
 `;
 
 function printHelp(): void {
@@ -46,6 +55,7 @@ async function main(): Promise<number> {
         cwd,
         dryRun: flags.has("--dry-run"),
         yes: flags.has("--yes") || flags.has("-y"),
+        useCli: flags.has("--use-cli"),
       });
     case "sync":
       return runSync({ cwd });
