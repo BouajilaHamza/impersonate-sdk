@@ -2,7 +2,7 @@
 
 Universal admin impersonation for any web app. Let admins "view as" any user with a single SDK.
 
-Auth-agnostic core with adapters for **Supabase**, **Firebase**, **Django**, **Flask**, **Express**, and any REST backend.
+Auth-agnostic core. Today: **Supabase** (turnkey adapter + edge function) and a **Generic HTTP adapter** that works with any REST backend (Django, Flask, Express, custom). Dedicated adapters for Firebase, Django, and Flask are planned — see [Status](#status).
 
 ## Features
 
@@ -314,15 +314,41 @@ Or give your agent this one-liner, which works with Claude Code, Cursor, and mos
 | [Security](docs/security.md) | Security model and best practices |
 | [Integration Prompt](docs/integration-prompt.md) | Prompt for AI agents to integrate the SDK into a project |
 
-## Roadmap
+## Status
 
-| Version | Scope |
+### Backends
+
+| Backend | Support |
 | --- | --- |
-| **0.1** | Core + Supabase adapter + Generic HTTP adapter + React bindings |
-| 0.2 | Firebase adapter + Cloud Function template |
-| 0.3 | Vue composable + Svelte store bindings |
-| 0.4 | Django/Flask server templates |
-| 1.0 | Audit trail, rate limiting, docs site |
+| Supabase | Stable: dedicated adapter + edge function template |
+| Any REST API | Stable: Generic HTTP adapter |
+| Express | Server template ships; dedicated adapter planned |
+| Firebase | Planned |
+| Django, Flask | Planned (works today via the Generic HTTP adapter) |
+
+### Frontends
+
+| Framework | Support |
+| --- | --- |
+| React | Stable: provider, hook, banner |
+| Next.js App Router | Stable: router handoff hook |
+| react-router v6/v7 | Stable: router handoff hook |
+| TanStack Router | Stable: router handoff hook |
+| Vue, Svelte | Planned |
+
+Stable means: pre-1.0 minor versions may still introduce breaking changes, but the API is in production use and documented.
+
+Release history: [GitHub Releases](https://github.com/sylergydigital/impersonate-sdk/releases).
+
+## Pre-1.0 Direction
+
+The path to 1.0 focuses on three themes:
+
+- **Zero-friction onboarding** — deploy without external CLI binaries; first-class config file.
+- **Backend breadth** — turnkey adapters for Firebase, Express, and server templates for Django/Flask.
+- **Operational hardening** — audit trail, rate limiting, hosted documentation site.
+
+Track work and propose ideas in [Issues](https://github.com/sylergydigital/impersonate-sdk/issues).
 
 ## Migration: stop-failed state (v0.7)
 
