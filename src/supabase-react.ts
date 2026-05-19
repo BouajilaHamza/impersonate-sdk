@@ -20,7 +20,7 @@ import { useImpersonation } from "./react";
 
 interface SignOutCapableClient {
   auth: {
-    signOut(): Promise<{ error: Error | null } | { error: null } | unknown>;
+    signOut(): Promise<{ error?: Error | null }>;
   };
 }
 
