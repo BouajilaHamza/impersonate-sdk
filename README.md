@@ -8,7 +8,7 @@ Auth-agnostic core with adapters for **Supabase**, **Firebase**, **Django**, **F
 
 - **Auth-agnostic** -- adapter pattern works with any auth backend
 - **Auto-expiry timer** -- 15-minute default with configurable hard cap
-- **Built-in banner** -- sticky notification bar with countdown, extend, and end actions
+- **Built-in banner** -- movable notification bar with countdown, extend, and end actions
 - **Page-refresh survival** -- timer, session, and display name persist through refreshes
 - **Cross-tab safety** -- detects orphaned impersonation sessions
 - **Headless mode** -- use the hook for fully custom UI
@@ -208,7 +208,9 @@ import { ImpersonationProvider, ImpersonationBanner }
 </ImpersonationProvider>
 ```
 
-Place `<ImpersonationBanner />` at the top of the layout so it renders as a sticky bar above all content.
+Place `<ImpersonationBanner />` once in the layout. The default banner is fixed
+to the bottom of the browser, can be dragged to snap between bottom and top, and
+persists the admin's last chosen position in the browser.
 
 ### Add the trigger
 

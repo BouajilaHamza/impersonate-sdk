@@ -80,13 +80,22 @@ Drop-in notification bar. Renders nothing when impersonation is inactive.
 
 ### Default Banner
 
+The default banner is fixed to the bottom of the browser by default. Users can
+drag the non-button area to snap it to the top or bottom, and the icon button
+provides the same move action for keyboard and screen-reader users. The last
+chosen position is persisted in the browser.
+
 ```tsx
 <ImpersonationBanner
+  defaultPosition="bottom"
   onEnd={() => navigate('/admin')}
   extendLabel="Extend 15 min"
   endLabel="End Impersonation"
 />
 ```
+
+If your app already has fixed headers or footers, add page padding or pass a
+custom `style` to avoid covering important controls.
 
 ### Headless Mode
 
@@ -108,6 +117,7 @@ Bring your own UI with the `render` prop:
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
+| `defaultPosition` | `"top" \| "bottom"` | `"bottom"` | Initial snapped position before a browser-persisted preference exists |
 | `onEnd` | `() => void \| Promise<void>` | Calls `stop()` | Custom end handler |
 | `extendLabel` | `string` | `"Extend 15 min"` | Extend button text |
 | `endLabel` | `string` | `"End Impersonation"` | End button text |

@@ -1,4 +1,12 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, PointerEvent, ReactNode } from "react";
+import { useEffect, useState } from "react";
+import {
+  getNextBannerPosition,
+  persistBannerPosition,
+  resolveBannerPosition,
+  snapBannerPosition,
+  type BannerPosition,
+} from "./bannerPosition";
 import { useImpersonation } from "./useImpersonation";
 
 // ── Inline SVG Icons (no lucide-react dependency) ──────────────────
@@ -67,12 +75,43 @@ const PlusIcon = () => (
   </svg>
 );
 
+const ChevronDownIcon = () => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+const ChevronUpIcon = () => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="m18 15-6-6-6 6" />
+  </svg>
+);
+
 // ── Styles ─────────────────────────────────────────────────────────
 
 const styles = {
   banner: {
-    position: "sticky",
-    top: 0,
+    position: "fixed",
+    left: 0,
+    right: 0,
     zIndex: 9999,
     display: "flex",
     alignItems: "center",
@@ -86,6 +125,7 @@ const styles = {
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     transition: "background-color 0.2s, color 0.2s",
+    touchAction: "none",
   } satisfies CSSProperties,
 
   bannerNormal: {
@@ -162,6 +202,12 @@ const styles = {
     color: "#ffffff",
   } satisfies CSSProperties,
 
+  iconButton: {
+    width: "24px",
+    justifyContent: "center",
+    padding: 0,
+  } satisfies CSSProperties,
+
   maxTimeLabel: {
     fontSize: "11px",
     fontWeight: 600,
@@ -185,6 +231,9 @@ function ensureKeyframes() {
 // ── Component ──────────────────────────────────────────────────────
 
 export interface ImpersonationBannerProps {
+  /** Default snapped position before a browser-persisted preference exists. Default: "bottom". */
+  defaultPosition?: BannerPosition;
+
   /** Called when the user clicks "End". If not provided, calls stop() only. */
   onEnd?: () => void | Promise<void>;
 
@@ -229,6 +278,7 @@ function formatTime(seconds: number): string {
 }
 
 export function ImpersonationBanner({
+  defaultPosition = "bottom",
   onEnd: onEndProp,
   extendLabel = "Extend 15 min",
   endLabel = "End Impersonation",
@@ -238,6 +288,14 @@ export function ImpersonationBanner({
   render,
 }: ImpersonationBannerProps) {
   ensureKeyframes();
+  const [position, setPosition] = useState<BannerPosition>(() =>
+    resolveBannerPosition({ defaultPosition })
+  );
+  const [dragState, setDragState] = useState<{
+    pointerId: number;
+    offsetY: number;
+    currentY: number;
+  } | null>(null);
 
   const {
     isActive,
@@ -255,6 +313,47 @@ export function ImpersonationBanner({
     } else {
       await stop();
     }
+  };
+
+  useEffect(() => {
+    setPosition(resolveBannerPosition({ defaultPosition }));
+  }, [defaultPosition]);
+
+  const applyPosition = (nextPosition: BannerPosition) => {
+    setPosition(nextPosition);
+    persistBannerPosition(nextPosition);
+  };
+
+  const handleMove = () => {
+    applyPosition(getNextBannerPosition(position));
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!canStartDrag(event.target)) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragState({
+      pointerId: event.pointerId,
+      offsetY: event.clientY - rect.top,
+      currentY: event.clientY,
+    });
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+    setDragState({
+      ...dragState,
+      currentY: event.clientY,
+    });
+  };
+
+  const finishDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+
+    applyPosition(snapBannerPosition(event.clientY, window.innerHeight));
+    setDragState(null);
   };
 
   if (!isActive) return null;
@@ -279,13 +378,33 @@ export function ImpersonationBanner({
 
   const displayName = targetDisplayName || "another user";
   const showExtendButton = canExtend && remainingSeconds !== null && remainingSeconds > 0;
+  const isDragging = dragState !== null;
+  const moveLabel =
+    position === "top"
+      ? "Move impersonation banner to bottom"
+      : "Move impersonation banner to top";
 
   return (
     <div
       className={className}
+      onPointerCancel={finishDrag}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishDrag}
       style={{
         ...styles.banner,
         ...(isUrgent ? styles.bannerUrgent : styles.bannerNormal),
+        ...(isDragging
+          ? {
+              top: dragState.currentY - dragState.offsetY,
+              bottom: "auto",
+              cursor: "grabbing",
+              transition: "none",
+              userSelect: "none",
+            }
+          : position === "top"
+            ? { top: 0, bottom: "auto", cursor: "grab" }
+            : { top: "auto", bottom: 0, cursor: "grab" }),
         ...styleProp,
       }}
       role="status"
@@ -314,6 +433,7 @@ export function ImpersonationBanner({
         (canExtend ? (
           <button
             onClick={extend}
+            data-imp-banner-no-drag
             style={{ ...styles.button, ...styles.extendButton }}
             type="button"
           >
@@ -326,6 +446,7 @@ export function ImpersonationBanner({
 
       <button
         onClick={handleEnd}
+        data-imp-banner-no-drag
         style={{
           ...styles.button,
           ...(isUrgent ? styles.endButtonUrgent : styles.endButtonNormal),
@@ -336,6 +457,28 @@ export function ImpersonationBanner({
         <XIcon />
         {endLabel}
       </button>
+
+      <button
+        aria-label={moveLabel}
+        onClick={handleMove}
+        data-imp-banner-no-drag
+        style={{
+          ...styles.button,
+          ...styles.iconButton,
+          ...(isUrgent ? styles.endButtonUrgent : styles.endButtonNormal),
+        }}
+        title={moveLabel}
+        type="button"
+      >
+        {position === "top" ? <ChevronDownIcon /> : <ChevronUpIcon />}
+      </button>
     </div>
+  );
+}
+
+function canStartDrag(target: EventTarget): boolean {
+  if (!(target instanceof Element)) return false;
+  return !target.closest(
+    "button,a,input,select,textarea,[data-imp-banner-no-drag]"
   );
 }
