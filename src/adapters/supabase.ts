@@ -126,6 +126,14 @@ export class SupabaseAdapter implements ImpersonationAdapter {
     }
   }
 
+  async destroyImpersonatedSession(): Promise<void> {
+    const { error } = await this.supabase.auth.signOut();
+    if (error) {
+      // Best-effort: log but don't throw, since we're about to restore admin session
+      console.warn('[impersonate-sdk] Failed to destroy impersonated session:', error.message);
+    }
+  }
+
   async clearSession(): Promise<void> {
     const { error } = await this.supabase.auth.signOut();
     if (error) {

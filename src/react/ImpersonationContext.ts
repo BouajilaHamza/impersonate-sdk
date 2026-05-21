@@ -10,3 +10,5 @@ export interface ImpersonationContextValue {
 
 export const ImpersonationContext =
   createContext<ImpersonationContextValue | null>(null);
+
+ImpersonationContext.displayName = "ImpersonationContext";
