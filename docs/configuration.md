@@ -87,3 +87,38 @@ The SDK falls back to in-memory storage automatically when `window` is undefined
 | `IMPERSONATION_ROLE_COLUMN` | No | auto-detect | Auto-detected from `role`, `role_id`, `user_role`. Set to override. |
 | `IMPERSONATION_NAME_TABLE` | No | `profiles` | Table to read display name from |
 | `IMPERSONATION_NAME_COLUMN` | No | auto-detect | Auto-detected from `display_name`, `full_name`, `name`. Set to override. |
+| `IMPERSONATION_RATE_LIMIT_WINDOW_MS` | No | `3600000` (1 hour) | Sliding window for the per-admin rate limiter, in milliseconds. |
+| `IMPERSONATION_RATE_LIMIT_MAX` | No | `10` | Max impersonation requests per admin per window. |
+| `IMPERSONATION_ALLOWED_ORIGINS` | No | -- | Comma-separated list of allowed `Origin` headers. Leave unset to accept any origin (still enforced by RLS + the admin role check). |
+
+### Deployment Credentials
+
+These are read by `npx impersonate-sdk deploy` and are not used by the edge function at runtime. Place them in `.env`, `.env.local`, or `supabase/.env`.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `SUPABASE_ACCESS_TOKEN` (or `SUPABASE_PAT`) | Zero-CLI path | PAT from https://supabase.com/dashboard/account/tokens. Enables Management-API deploys without the `supabase` binary. |
+| `SUPABASE_PROJECT_REF` | Zero-CLI path | Project ref from the Supabase dashboard URL. Auto-detected from `supabase/.temp/project-ref` when the project is linked. |
+
+## Shared Config File (`impersonate.config.ts`)
+
+A TypeScript config file at the project root is the single source of truth between the CLI and the app:
+
+```ts
+import { defineImpersonationConfig } from '@sylergydigital/impersonate-sdk/config';
+
+export default defineImpersonationConfig({
+  adminRoles: ['admin', 'superadmin'],
+  // Optional schema overrides:
+  roleTable: 'profiles',
+  roleColumn: 'role',
+  nameTable: 'profiles',
+  nameColumn: 'full_name',
+  // Used by the router handoff hooks:
+  routes: { adminPath: '/admin/users', userPath: '/' },
+  // Optional session duration (defaults to 15 minutes):
+  sessionDurationMs: 15 * 60 * 1000,
+});
+```
+
+`init` and `deploy` pick this up automatically. Run `npx impersonate-sdk sync` after editing to rewrite `supabase/.env`. The Deno edge function cannot import this file directly — the CLI bridges it to Supabase secrets.

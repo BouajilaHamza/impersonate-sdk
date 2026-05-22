@@ -51,6 +51,28 @@ The manager is created once on mount and destroyed on unmount.
 - `orphan` — a stale impersonation session was detected on app mount (e.g. tab was closed mid-session) and cleaned up.
 - `restore-failed` — the admin session could not be restored (typically a transient network failure on the auth backend, e.g. Supabase's `setSession` `_getUser` call failing in a backgrounded tab). The SDK has already best-effort signed the impersonated user out via the adapter's `clearSession` hook, so the client is unauthenticated. Your `onStop` handler should redirect to a safe location (login or admin home). Use `onError` (phase `"stop"`) if you want to additionally surface a toast.
 
+## Router Handoff Hooks
+
+Instead of wiring `onStart` / `onStop` by hand, use the matching router-handoff hook so navigation goes through the project's router rather than a hard reload. Each hook returns an object you can spread directly into `<ImpersonationProvider>`.
+
+```tsx
+// react-router v6/v7
+import { useReactRouterHandoff } from '@sylergydigital/impersonate-sdk/react/router/react-router';
+// Next.js (app or pages router)
+import { useNextHandoff } from '@sylergydigital/impersonate-sdk/react/router/next';
+// TanStack Router
+import { useTanstackHandoff } from '@sylergydigital/impersonate-sdk/react/router/tanstack';
+
+const handoff = useReactRouterHandoff({ adminPath: '/admin/users', userPath: '/' });
+
+<ImpersonationProvider manager={manager} {...handoff}>
+  <ImpersonationBanner />
+  {children}
+</ImpersonationProvider>
+```
+
+Each hook accepts the same `{ adminPath, userPath }` shape (matches `routes` in `impersonate.config.ts`). The hook is what wires the `onStart` / `onStop` callbacks — do not pass them yourself when using a handoff hook.
+
 ## `useImpersonation()`
 
 Access state and actions from any component inside the provider.

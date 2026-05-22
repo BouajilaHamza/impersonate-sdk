@@ -119,7 +119,7 @@ Before writing code, detect the following by reading `package.json`, config file
 1. **Package manager**: bun, pnpm, yarn, or npm
 2. **Auth backend**: Supabase (`@supabase/supabase-js`), Firebase, Django, Flask, Express with sessions, Clerk, NextAuth, or custom
 3. **UI framework**: React, Next.js (app or pages router), Vue, Svelte, or vanilla
-4. **Router**: react-router, Next.js routing, TanStack Router, or none
+4. **Router**: react-router (v6/v7), Next.js routing, TanStack Router, or none
 5. **Existing admin UI**: is there already an admin/users page? Where is it?
 6. **Auth context/hook**: find the existing useAuth/useUser hook and sign-out function — we will need to guard against accidental sign-out during impersonation
 
@@ -137,10 +137,23 @@ Install the SDK with the detected package manager:
 
 The SDK needs a server endpoint that validates the admin and returns a session for the target user. The client never decides who can impersonate.
 
-### If Supabase
-1. Copy the template: `cp -r node_modules/@sylergydigital/impersonate-sdk/servers/supabase/impersonate-user supabase/functions/impersonate-user`
-2. Tell the user to set `IMPERSONATION_ADMIN_ROLES` in their Supabase dashboard (comma-separated, e.g. `admin` or `admin,superadmin`). Schema columns for role and display name are auto-detected from `profiles`; override with `IMPERSONATION_ROLE_TABLE` / `IMPERSONATION_ROLE_COLUMN` / `IMPERSONATION_NAME_TABLE` / `IMPERSONATION_NAME_COLUMN` only if auto-detect fails.
-3. Deploy: `supabase functions deploy impersonate-user`
+### If Supabase (recommended — use the SDK CLI)
+
+The SDK ships a CLI that copies the edge function, writes `supabase/.env`, and deploys via the Supabase Management API (or the `supabase` CLI if a PAT is not available).
+
+1. `npx impersonate-sdk init` — copies the edge function to `supabase/functions/impersonate-user/`, writes `supabase/.env` from prompts or an existing `impersonate.config.ts`, and prints the provider-wiring snippet for the detected framework.
+2. If the project is not yet linked: `supabase link --project-ref <your-project-ref>` (skip on the zero-CLI path below).
+3. `npx impersonate-sdk deploy` — pushes secrets and deploys the function.
+   - Zero-CLI path: set `SUPABASE_ACCESS_TOKEN` (PAT from https://supabase.com/dashboard/account/tokens) and `SUPABASE_PROJECT_REF` in `.env`, `.env.local`, or `supabase/.env`. No `supabase` binary needed.
+   - CLI path: requires `supabase login` + `supabase link` already done.
+
+Required env: `IMPERSONATION_ADMIN_ROLES` (comma-separated role values). Schema columns for role and display name are auto-detected from `profiles`; override only if auto-detect fails: `IMPERSONATION_ROLE_TABLE` / `IMPERSONATION_ROLE_COLUMN` / `IMPERSONATION_NAME_TABLE` / `IMPERSONATION_NAME_COLUMN`.
+
+### If Supabase (manual fallback)
+
+1. `cp -r node_modules/@sylergydigital/impersonate-sdk/servers/supabase/impersonate-user supabase/functions/impersonate-user`
+2. Set `IMPERSONATION_ADMIN_ROLES` in the Supabase dashboard under Edge Function secrets.
+3. `supabase functions deploy impersonate-user`
 
 ### If Express
 1. Copy `node_modules/@sylergydigital/impersonate-sdk/servers/express/impersonate.ts` into the project's server folder
@@ -153,6 +166,21 @@ Create a POST endpoint that:
 2. Looks up the target user by the `target_user_id` in the request body
 3. Creates a session/token for the target user
 4. Returns the response in a shape that the client's `signIn` callback can consume (session cookie, JWT, etc.)
+
+### Optional: shared config file
+
+For one source of truth between the CLI and the app, create `impersonate.config.ts` at the project root:
+
+```ts
+import { defineImpersonationConfig } from '@sylergydigital/impersonate-sdk/config';
+
+export default defineImpersonationConfig({
+  adminRoles: ['admin', 'superadmin'],
+  routes: { adminPath: '/admin/users', userPath: '/' },
+});
+```
+
+`init` and `deploy` pick it up automatically. Run `npx impersonate-sdk sync` after edits.
 
 ## Phase 4 — Client Integration
 
@@ -192,12 +220,35 @@ export const impersonationManager = createGenericImpersonation({
 
 ### Wrap the app
 
-Find the root component (usually `App.tsx`, `_app.tsx`, or `layout.tsx`) and wrap it:
+Find the root component (usually `App.tsx`, `_app.tsx`, or `layout.tsx`).
+
+If the project has a router, use the matching handoff hook so `onStart` / `onStop` navigate via the router instead of a hard reload:
 
 ```tsx
+// react-router v6/v7
 import { ImpersonationProvider, ImpersonationBanner }
   from '@sylergydigital/impersonate-sdk/supabase-react';
+import { useReactRouterHandoff }
+  from '@sylergydigital/impersonate-sdk/react/router/react-router';
 
+function AppWithImpersonation({ children }) {
+  const handoff = useReactRouterHandoff({ adminPath: '/admin/users', userPath: '/' });
+  return (
+    <ImpersonationProvider manager={impersonationManager} {...handoff}>
+      <ImpersonationBanner />
+      {children}
+    </ImpersonationProvider>
+  );
+}
+```
+
+Swap the import for the matching stack:
+- Next.js → `@sylergydigital/impersonate-sdk/react/router/next` (`useNextHandoff`)
+- TanStack Router → `@sylergydigital/impersonate-sdk/react/router/tanstack` (`useTanstackHandoff`)
+
+If there is no router, pass `onStart` / `onStop` directly:
+
+```tsx
 <ImpersonationProvider
   manager={impersonationManager}
   onStart={(name) => /* navigate to user dashboard */}
@@ -208,9 +259,7 @@ import { ImpersonationProvider, ImpersonationBanner }
 </ImpersonationProvider>
 ```
 
-Place `<ImpersonationBanner />` once in the layout. The default banner is fixed
-to the bottom of the browser, can be dragged to snap between bottom and top, and
-persists the admin's last chosen position in the browser.
+Place `<ImpersonationBanner />` once inside the provider. JSX position does not matter — the banner renders `position: fixed` (default: bottom of viewport), is draggable to snap top/bottom, and persists the admin's last-chosen position per browser.
 
 ### Add the trigger
 
@@ -233,7 +282,7 @@ If there is no admin page yet, ask the user where they want it and stop — don'
 
 ### Guard the sign-out function
 
-Find the existing sign-out function and swap it for the SDK hook so impersonation is stopped first (which restores the admin session instead of signing them out):
+For Supabase, swap the existing sign-out for the SDK hook so impersonation is stopped first (which restores the admin session):
 
 ```ts
 import { useGuardedSignOut } from '@sylergydigital/impersonate-sdk/supabase-react';
@@ -242,7 +291,7 @@ const signOut = useGuardedSignOut(supabase);
 // <button onClick={signOut}>Sign out</button>
 ```
 
-For non-Supabase backends, keep the manual pattern:
+For non-Supabase backends, wrap manually:
 
 ```ts
 const { isActive, stop } = useImpersonation();
@@ -254,7 +303,23 @@ const signOut = async () => {
 
 ## Phase 5 — Theming (if the project has a design system)
 
-The banner uses CSS custom properties. If the project has a theme token system (Tailwind, CSS variables, etc.), map them:
+The banner reads CSS custom properties (`--imp-banner-bg`, `--imp-banner-urgent-bg`, etc.).
+
+### Tailwind / shadcn projects
+
+One CSS import maps the banner tokens to the project's existing theme variables:
+
+```css
+/* Tailwind v4 */
+@import "@sylergydigital/impersonate-sdk/tailwind-v4.css";
+
+/* Tailwind v3 (HSL triplet tokens, e.g. shadcn) */
+@import "@sylergydigital/impersonate-sdk/tailwind.css";
+```
+
+Override any individual `--imp-*` var after the import to customize.
+
+### Other design systems
 
 ```css
 :root {
@@ -276,17 +341,20 @@ After wiring everything up:
 3. Confirm:
    - The app still builds without TypeScript errors
    - The admin page shows an "Impersonate" button on user rows
-   - Clicking "Impersonate" requires the server endpoint to be deployed — if the project doesn't have it deployed yet, say so and give the user the exact deployment command for their stack
+   - Clicking "Impersonate" requires the server endpoint to be deployed — if not yet deployed, instruct the user to run `npx impersonate-sdk deploy` (Supabase) or to deploy their own endpoint.
 
 ## Rules
 
 - **Do not** hardcode admin checks on the client — the server endpoint must validate admin role
 - **Do not** scaffold an admin UI, user list, or auth flow if it doesn't already exist — ask the user where to add the trigger button
-- **Do not** commit secrets (Supabase service role keys, etc.) — these belong in the dashboard/env, not the repo
+- **Do not** commit secrets (Supabase service role keys, `SUPABASE_ACCESS_TOKEN`, etc.) — these belong in `.env` / `.env.local` (gitignored) or the dashboard, not the repo
 - **Do** preserve the project's existing code style (quotes, semicolons, import order)
 - **Do** use the factory functions (`createSupabaseImpersonation`, `createGenericImpersonation`) over manual adapter + manager construction
 - **Do** use `durationMinutes` over `durationMs` — it's clearer in configuration
-- **Do** report what you found, what you changed, and what the user needs to do next (deploy the edge function, set env vars, etc.)
+- **Do** prefer `npx impersonate-sdk init` + `deploy` over hand-copying templates on Supabase projects
+- **Do** wire the matching router-handoff hook (`useReactRouterHandoff`, `useNextHandoff`, `useTanstackHandoff`) instead of relying on `location.reload()` for navigation
+- **Do** swap the existing sign-out for `useGuardedSignOut(supabase)` on Supabase projects
+- **Do** report what you found, what you changed, and what the user needs to do next (run `deploy`, set env vars, etc.)
 
 ## Reference Docs
 
