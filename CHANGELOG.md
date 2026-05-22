@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-05-22
+
+### Bug Fixes
+
+- **Build:** Fixed race condition where parallel tsup configs sharing `clean: true` on the same `outDir` would wipe each other's emitted `.d.ts` files. `supabase-react.d.ts` and `react/router/react-router.d.ts` were the most affected, breaking type resolution for consumers installing from git. Only the first config now cleans; subsequent configs run with `clean: false`.
+
 ## [0.7.0] - 2026-05-17
 
 ### Security
